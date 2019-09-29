@@ -1,0 +1,27 @@
+name: Build
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install stack
+      run: which stack || curl -sSL https://get.haskellstack.org/ | sh
+    - name: Install GHC
+      run: stack setup
+    - name: Build
+      run: |
+        stack build --fast
+
+  build-macos:
+    runs-on: macOS-10.14
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install stack
+      run: which stack || curl -sSL https://get.haskellstack.org/ | sh
+    - name: Install GHC
+      run: stack setup
+    - name: Build
+      run: |
+        stack build --fast
