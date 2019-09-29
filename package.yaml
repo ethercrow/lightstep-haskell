@@ -1,0 +1,75 @@
+name: grpc-foo
+version: 0.1.0
+synopsis: Nothing to see here, please move along
+description: Nothing to see here, please move along
+maintainer: Dmitry Ivanov <ethercrow@gmail.com>
+license: Apache-2.0
+github: ethercrow/grpc-foo
+category: Tools
+
+ghc-options: -Wall -ferror-spans
+
+extra-source-files: proto/**/*.proto
+
+custom-setup:
+  dependencies:
+  - base
+  - Cabal
+  - proto-lens-setup
+
+dependencies:
+- base >= 4.9 && < 5
+- containers
+- exceptions
+- lens
+- text
+- transformers
+- unordered-containers
+
+library:
+  source-dirs: src
+  dependencies:
+  - proto-lens-runtime
+  - proto-lens
+  exposed-modules:
+  - Proto.Google.Protobuf.Timestamp
+  - Proto.Google.Protobuf.Timestamp_Fields
+  - Proto.Google.Api.Http
+  - Proto.Google.Api.Http_Fields
+  - Proto.Google.Api.Annotations
+  - Proto.Google.Api.Annotations_Fields
+  - Proto.Lightstep
+  - Proto.Lightstep_Fields
+  - Proto.Collector
+  - Proto.Collector_Fields
+
+executables:
+  grpc-foo:
+    main: Main.hs
+    source-dirs: cli
+    dependencies:
+    - grpc-foo
+
+tests:
+  tasty:
+    main: TestMain.hs
+    source-dirs: test
+    dependencies:
+    - grpc-foo
+    - tasty
+    - tasty-discover
+    - tasty-hunit
+    - tasty-quickcheck
+    - QuickCheck
+
+default-extensions:
+- BlockArguments
+- FlexibleInstances
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- RecordWildCards
+- RecordWildCards
+- ScopedTypeVariables
+- TupleSections
+- TypeApplications
