@@ -1,4 +1,11 @@
 
+README.md: README.template.md cli/Main.hs
+	# robust webscale enterprise ready templating system
+	cat README.template.md > README.md
+	echo '```haskell' >> README.md
+	cat cli/Main.hs >> README.md
+	echo '```' >> README.md
+
 .PHONY: proto
 proto:
 	which proto-lens-protoc || stack install proto-lens-protoc
@@ -26,6 +33,7 @@ weeder:
 .PHONY: format
 format:
 	find src -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace '{}' \;
+	find cli -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace '{}' \;
 
 .PHONY: watch
 watch:

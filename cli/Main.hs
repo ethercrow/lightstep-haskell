@@ -1,59 +1,61 @@
-{-# language DataKinds #-}
-{-# language LambdaCase #-}
-{-# language OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import Control.Monad.IO.Class
 import Control.Concurrent
-import Control.Lens
+import Control.Concurrent.Async
 import Data.Maybe
+import qualified Data.Text as T
+import LightStep.HighLevel.IO (LightStepConfig (..), setTag, withSingletonLightStep, withSpan)
 import System.Environment
 import System.Exit
-import Text.Read
-import Data.ProtoLens.Message (defMessage)
-import qualified Data.Text as T
 
-import Proto.Google.Protobuf.Timestamp_Fields
-import Proto.Collector
-import Proto.Collector_Fields
-
-import Network.HTTP2.Client
-
-import LightStep
+seriousBusinessMain :: IO ()
+seriousBusinessMain = concurrently_ frontend backend
+  where
+    frontend =
+      withSpan "RESTful API" $ do
+        threadDelay 10000
+        setTag "foo" "bar"
+        withSpan "Kafka" $ do
+          threadDelay 20000
+          setTag "foo" "baz"
+        threadDelay 30000
+        withSpan "GraphQL" $ do
+          threadDelay 40000
+          setTag "foo" "quux"
+          withSpan "Mongodb" $ do
+            threadDelay 50000
+          setTag "lorem" "ipsum"
+          threadDelay 60000
+        withSpan "data->json" $ pure ()
+        withSpan "json->yaml" $ pure ()
+        withSpan "yaml->xml" $ pure ()
+        withSpan "xml->protobuf" $ pure ()
+        withSpan "protobuf->thrift" $ pure ()
+        withSpan "thrift->base64" $ pure ()
+        threadDelay 70000
+    backend =
+      withSpan "Background Data Science" $ do
+        threadDelay 10000
+        withSpan "Tensorflow" $ do
+          threadDelay 100000
+          setTag "learning" "deep"
+        withSpan "Torch" $ do
+          threadDelay 100000
+          setTag "learning" "very_deep"
+        withSpan "Hadoop" $ do
+          threadDelay 100000
+          setTag "learning" "super_deep"
 
 main :: IO ()
 main = do
-  token <- lookupEnv "LIGHTSTEP_TOKEN" >>= \case
-    Just t -> pure $ T.pack t
-    Nothing -> do
-      putStrLn "LIGHTSTEP_TOKEN environment variable not defined"
-      exitFailure
+  token <-
+    lookupEnv "LIGHTSTEP_TOKEN" >>= \case
+      Just t -> pure $ T.pack t
+      Nothing -> do
+        putStrLn "LIGHTSTEP_TOKEN environment variable not defined"
+        exitFailure
   host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
   port <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-  runClientIO $ do
-    lsClient <- mkClient
-      host
-      port -- port
-      False -- doCompress
-      token
-      "helloworld"
-
-    sp1 <- liftIO $ startSpan "haskell_operation_1"
-
-    liftIO $ threadDelay 10000
-
-    sp2 <- liftIO $ startSpan "haskell_operation_2"
-
-    liftIO $ threadDelay 20000
-
-    sp2 <- liftIO $ finishSpan sp2
-
-    liftIO $ threadDelay 30000
-
-    sp1 <- liftIO $ finishSpan sp1
-
-    reportSpans lsClient [sp1, sp2]
-
-    closeClient lsClient
-
-  putStrLn "All done."
-
+  let lsConfig = LightStepConfig host port token "helloworld" 5
+  withSingletonLightStep lsConfig seriousBusinessMain
+  putStrLn "All done"
