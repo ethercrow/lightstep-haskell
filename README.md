@@ -14,7 +14,7 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Data.Maybe
 import qualified Data.Text as T
-import LightStep
+import LightStep.HighLevel.IO (LightStepConfig (..), setTag, withSingletonLightStep, withSpan)
 import System.Environment
 import System.Exit
 
@@ -36,6 +36,12 @@ seriousBusinessMain = concurrently_ frontend backend
             threadDelay 50000
           setTag "lorem" "ipsum"
           threadDelay 60000
+        withSpan "data->json" $ pure ()
+        withSpan "json->yaml" $ pure ()
+        withSpan "yaml->xml" $ pure ()
+        withSpan "xml->protobuf" $ pure ()
+        withSpan "protobuf->thrift" $ pure ()
+        withSpan "thrift->base64" $ pure ()
         threadDelay 70000
     backend =
       withSpan "Background Data Science" $ do
@@ -60,6 +66,7 @@ main = do
         exitFailure
   host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
   port <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-  let lsConfig = LightStepConfig host port token "helloworld"
+  let lsConfig = LightStepConfig host port token "helloworld" 5
   withSingletonLightStep lsConfig seriousBusinessMain
+  putStrLn "All done"
 ```

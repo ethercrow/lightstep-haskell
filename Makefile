@@ -40,7 +40,7 @@ watch:
 	ghcid
 
 .PHONY: release
-release:
+release: stack-build README.md
 	stack sdist
 	stack upload .
 
