@@ -7,3 +7,6 @@ extra-deps:
 - http2-client-grpc-0.7.0.0
 - http2-grpc-types-0.4.0.0
 - http2-client-0.9.0.0
+- polysemy-1.2.1.0
+- type-errors-0.2.0.0
+- type-errors-pretty-0.0.0.0
