@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module LightStep.HighLevel.IO 
   ( module LightStep.HighLevel.IO
   , module LightStep.LowLevel
@@ -28,7 +29,10 @@ withSpan opName action =
   bracket
     (pushSpan opName)
     popSpan 
-    (const action)
+    (const action')
+  where action' = action `catch` \e -> do
+        setTag "error" "true"
+        throwM (e :: SomeException)
 
 pushSpan :: T.Text -> IO ()
 pushSpan opName = do
