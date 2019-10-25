@@ -29,10 +29,7 @@ withSpan opName action =
   bracket
     (pushSpan opName)
     popSpan 
-    (const action')
-  where action' = action `catch` \e -> do
-        setTag "error" "true"
-        throwM (e :: SomeException)
+    (const (onException action (setTag "error" "true")))
 
 pushSpan :: T.Text -> IO ()
 pushSpan opName = do
