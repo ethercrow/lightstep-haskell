@@ -1,3 +1,6 @@
+0.1.2:
+  * [Highlevel.IO] Automatically set error=true tag if exception is thrown from within withSpan
+
 0.1.1:
   * Graceful shutdown
 
