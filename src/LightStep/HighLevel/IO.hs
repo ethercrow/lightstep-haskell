@@ -24,15 +24,15 @@ import qualified Data.Text as T
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
 globalSharedMutableSpanStacks = unsafePerformIO (newMVar mempty)
 
-withSpan :: T.Text -> IO a -> IO a
+withSpan :: MonadIO m => MonadMask m => T.Text -> m a -> m a
 withSpan opName action =
   bracket
     (pushSpan opName)
     popSpan 
     (const (onException action (setTag "error" "true")))
 
-pushSpan :: T.Text -> IO ()
-pushSpan opName = do
+pushSpan :: MonadIO m => T.Text -> m ()
+pushSpan opName = liftIO $ do
   sp <- startSpan opName
   tId <- myThreadId
   modifyMVar_ globalSharedMutableSpanStacks $ \stacks ->
@@ -45,8 +45,8 @@ pushSpan opName = do
               & spanContext.traceId .~ (psp ^. spanContext.traceId)
         in pure $! HM.update (Just . (sp' :)) tId stacks
 
-popSpan :: () -> IO ()
-popSpan () = do
+popSpan :: MonadIO m => () -> m ()
+popSpan () = liftIO $ do
   tId <- myThreadId
   sp <- modifyMVar globalSharedMutableSpanStacks
     (\stacks ->
@@ -56,8 +56,8 @@ popSpan () = do
   sp' <- finishSpan sp
   submitSpan sp'
 
-modifyCurrentSpan :: (Span -> Span) -> IO ()
-modifyCurrentSpan f = do
+modifyCurrentSpan :: MonadIO m => (Span -> Span) -> m ()
+modifyCurrentSpan f = liftIO $ do
   tId <- myThreadId
   modifyMVar_ globalSharedMutableSpanStacks
     (\stacks ->
@@ -65,7 +65,7 @@ modifyCurrentSpan f = do
           !stacks' = HM.insert tId (f sp : sps) stacks
       in pure stacks')
 
-setTag :: T.Text -> T.Text -> IO ()
+setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
 
