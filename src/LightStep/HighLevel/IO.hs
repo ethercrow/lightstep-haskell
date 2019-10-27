@@ -8,8 +8,9 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Lens
-import Control.Monad.Catch
+import Control.Exception.Safe
 import Control.Monad.Except
+import GHC.Conc
 import Data.Maybe
 import Data.ProtoLens.Message (defMessage)
 import LightStep.Internal.Debug
@@ -78,6 +79,8 @@ withSingletonLightStep :: LightStepConfig -> IO () -> IO ()
 withSingletonLightStep cfg action = do
   doneVar <- newEmptyMVar
   race_ (action >> waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar) $ do
+    tid <- myThreadId
+    labelThread tid "LightStep reporter"
     let work client = do
           d_ "Getting more spans"
           spans <- liftIO $ atomically $ do
@@ -85,11 +88,11 @@ withSingletonLightStep cfg action = do
             xs <- flushTBQueue globalSharedMutableSingletonState
             pure (x : xs)
           d_ $ "Got " <> show (length spans) <> " spans"
-          reportSpansRes <- try (reportSpans client spans)
+          reportSpansRes <- tryAny (reportSpans client spans)
           case reportSpansRes of
             Right () ->
               d_ $ "Reported " <> show (length spans) <> " spans"
-            Left (err :: SomeException) ->
+            Left err ->
               d_ $ "Error while reporting spans: " <> show err
         shutdown client = do
           d_ "Getting the last spans before shutdown"

@@ -1,3 +1,6 @@
+0.1.4:
+  * [Highlevel.IO] Fixed a deadlock in shutdown sequence
+
 0.1.3:
   * [Highlevel.IO] withSpan now works in transformer stacks instead of only IO
 
