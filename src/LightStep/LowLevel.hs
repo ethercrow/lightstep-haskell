@@ -31,6 +31,7 @@ data LightStepConfig
 
 reportSpans :: LightStepClient -> [Span] -> ExceptT ClientError IO ()
 reportSpans (LightStepClient grpc token rep) sps = do
+  d_ $ show ("RPC timeout", (\(Timeout t) -> t) $ _grpcClientTimeout grpc)
   ret <-
     rawUnary
       (RPC :: RPC CollectorService "report")
@@ -40,13 +41,19 @@ reportSpans (LightStepClient grpc token rep) sps = do
           & spans .~ sps
           & reporter .~ rep
       )
-  d_ (show ret)
+  d_ $ show ret
   -- FIXME: handle errors
   pure ()
 
 mkClient :: LightStepConfig -> ClientIO LightStepClient
 mkClient LightStepConfig {..} = do
-  grpc <- setupGrpcClient ((grpcClientConfigSimple lsHostName lsPort True) {_grpcClientConfigCompression = compression})
+  grpc <-
+    setupGrpcClient
+      ( (grpcClientConfigSimple lsHostName lsPort True)
+          { _grpcClientConfigCompression = compression,
+            _grpcClientConfigTimeout = Timeout 5 -- seconds
+          }
+      )
   pure $ LightStepClient grpc lsToken rep
   where
     compression = if False then gzip else uncompressed

@@ -97,10 +97,11 @@ withSingletonLightStep cfg action = do
         shutdown client = do
           d_ "Getting the last spans before shutdown"
           spans <- liftIO $ atomically $ flushTBQueue globalSharedMutableSingletonState
-          d_ $ "Got " <> show (length spans) <> " spans"
-          when (not $ null spans) $
+          when (not $ null spans) $ do
+            d_ $ "Got " <> show (length spans) <> " spans"
             reportSpans client spans
-          d_ $ "Reported " <> show (length spans) <> " spans"
+            d_ $ "Reported " <> show (length spans) <> " spans"
+          d_ "No more spans"
           closeClient client
           d_ "Client closed"
           liftIO $ putMVar doneVar ()
@@ -113,10 +114,19 @@ withSingletonLightStep cfg action = do
               work client
               loop
         loop
-    pure ()
 
 submitSpan :: Span -> IO ()
-submitSpan = atomically . writeTBQueue globalSharedMutableSingletonState
+submitSpan sp = do
+  written <- atomically $ tryWriteTBQueue globalSharedMutableSingletonState sp
+  when (not written) $ do
+    d_ "internal span queue is full, dropping the span"
+
+tryWriteTBQueue :: TBQueue a -> a -> STM Bool
+tryWriteTBQueue q a = isFullTBQueue q >>= \case
+  True -> pure False
+  _ -> do
+    writeTBQueue q a
+    pure True
 
 -- TODO: handle span batches larger that queue size
 submitSpans :: Foldable f => f Span -> IO ()
