@@ -7,6 +7,7 @@ module LightStep.LowLevel
 where
 
 import Chronos
+import Control.Exception.Safe
 import Control.Lens hiding (op)
 import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
@@ -31,7 +32,6 @@ data LightStepConfig
 
 reportSpans :: LightStepClient -> [Span] -> ExceptT ClientError IO ()
 reportSpans (LightStepClient grpc token rep) sps = do
-  d_ $ show ("RPC timeout", (\(Timeout t) -> t) $ _grpcClientTimeout grpc)
   ret <-
     rawUnary
       (RPC :: RPC CollectorService "report")
@@ -41,6 +41,7 @@ reportSpans (LightStepClient grpc token rep) sps = do
           & spans .~ sps
           & reporter .~ rep
       )
+      `withException` (\err -> d_ $ "reportSpans failed: " <> show (err :: SomeException))
   d_ $ show ret
   -- FIXME: handle errors
   pure ()

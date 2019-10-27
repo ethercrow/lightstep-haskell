@@ -77,43 +77,46 @@ globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 100
 
 withSingletonLightStep :: LightStepConfig -> IO () -> IO ()
 withSingletonLightStep cfg action = do
-  doneVar <- newEmptyMVar
-  race_ (action >> waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar) $ do
-    tid <- myThreadId
-    labelThread tid "LightStep reporter"
-    let work client = do
-          d_ "Getting more spans"
-          spans <- liftIO $ atomically $ do
-            x <- readTBQueue globalSharedMutableSingletonState
-            xs <- flushTBQueue globalSharedMutableSingletonState
-            pure (x : xs)
-          d_ $ "Got " <> show (length spans) <> " spans"
-          reportSpansRes <- tryAny (reportSpans client spans)
-          case reportSpansRes of
-            Right () ->
-              d_ $ "Reported " <> show (length spans) <> " spans"
-            Left err ->
-              d_ $ "Error while reporting spans: " <> show err
-        shutdown client = do
-          d_ "Getting the last spans before shutdown"
-          spans <- liftIO $ atomically $ flushTBQueue globalSharedMutableSingletonState
-          when (not $ null spans) $ do
-            d_ $ "Got " <> show (length spans) <> " spans"
-            reportSpans client spans
-            d_ $ "Reported " <> show (length spans) <> " spans"
-          d_ "No more spans"
-          closeClient client
-          d_ "Client closed"
-          liftIO $ putMVar doneVar ()
-    runExceptT
-      $ bracket
-        (mkClient cfg)
-        shutdown
-      $ \client -> do
-        let loop = do
-              work client
-              loop
-        loop
+  runExceptT (mkClient cfg) >>= \case
+    Left err -> do
+      d_ $ "Failed to start LightStep client: " <> show err
+      action
+    Right client -> do
+      d_ $ "Connected to LightStep " <> lsHostName cfg <> ":" <> show (lsPort cfg)
+      doneVar <- newEmptyMVar
+      let work = do
+            d_ "Getting more spans"
+            sps <- liftIO $ atomically $ do
+              x <- readTBQueue globalSharedMutableSingletonState
+              xs <- flushTBQueue globalSharedMutableSingletonState
+              pure (x : xs)
+            d_ $ "Got " <> show (length sps) <> " spans"
+            reportSpansRes <- tryAny (reportSpans client sps)
+            case reportSpansRes of
+              Right () ->
+                d_ $ "Reported " <> show (length sps) <> " spans"
+              Left err ->
+                d_ $ "Error while reporting spans: " <> show err
+          shutdown = do
+            d_ "Getting the last spans before shutdown"
+            sps <- liftIO $ atomically $ flushTBQueue globalSharedMutableSingletonState
+            when (not $ null sps) $ do
+              d_ $ "Got " <> show (length sps) <> " spans"
+              reportSpans client sps
+              d_ $ "Reported " <> show (length sps) <> " spans"
+            d_ "No more spans"
+            closeClient client
+            d_ "Client closed"
+            liftIO $ putMVar doneVar ()
+      race_ action $ do
+        tid <- myThreadId
+        labelThread tid "LightStep reporter"
+        runExceptT . fix $ \loop -> do
+          work
+          loop
+      race_
+        (runExceptT shutdown)
+        (waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar)
 
 submitSpan :: Span -> IO ()
 submitSpan sp = do
@@ -128,12 +131,12 @@ tryWriteTBQueue q a = isFullTBQueue q >>= \case
     writeTBQueue q a
     pure True
 
--- TODO: handle span batches larger that queue size
 submitSpans :: Foldable f => f Span -> IO ()
-submitSpans = atomically . mapM_ (writeTBQueue globalSharedMutableSingletonState)
+submitSpans = atomically . mapM_ (tryWriteTBQueue globalSharedMutableSingletonState)
 
 waitUntilDone :: Int -> MVar () -> IO ()
-waitUntilDone timeoutSeconds doneVar =
+waitUntilDone timeoutSeconds doneVar = do
+  d_ "waitUntilDone begin"
   race_
     ( do
         threadDelay $ 1_000_000 * timeoutSeconds
@@ -143,3 +146,4 @@ waitUntilDone timeoutSeconds doneVar =
         takeMVar doneVar
         d_ "waitUntilDone: done"
     )
+  d_ "waitUntilDone end"
