@@ -20,6 +20,7 @@ import Proto.Collector_Fields
 import System.IO.Unsafe
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import System.Timeout
 
 {-# noinline globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
@@ -137,13 +138,6 @@ submitSpans = atomically . mapM_ (tryWriteTBQueue globalSharedMutableSingletonSt
 waitUntilDone :: Int -> MVar () -> IO ()
 waitUntilDone timeoutSeconds doneVar = do
   d_ "waitUntilDone begin"
-  race_
-    ( do
-        threadDelay $ 1_000_000 * timeoutSeconds
-        d_ "waitUntilDone: timeout"
-    )
-    ( do
-        takeMVar doneVar
-        d_ "waitUntilDone: done"
-    )
-  d_ "waitUntilDone end"
+  timeout (1_000_000 * timeoutSeconds) $ do
+    takeMVar doneVar
+  d_ "waitUntilDone: done"
