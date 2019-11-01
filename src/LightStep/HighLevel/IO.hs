@@ -23,6 +23,15 @@ import qualified Data.Text as T
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
 globalSharedMutableSpanStacks = unsafePerformIO (newMVar mempty)
 
+data LogEntryKey =  ErrorKind | Event | Message | Stack | Custom String
+
+showLogEntryKey :: LogEntryKey -> T.Text
+showLogEntryKey ErrorKind  = T.pack "error.kind"
+showLogEntryKey Event      = T.pack "event"
+showLogEntryKey Message    = T.pack "message"
+showLogEntryKey Stack      = T.pack "stack"
+showLogEntryKey (Custom x) = T.pack x
+
 withSpan :: T.Text -> IO a -> IO a
 withSpan opName action =
   bracket
@@ -68,6 +77,9 @@ setTag :: T.Text -> T.Text -> IO ()
 setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
 
+setLog :: LogEntryKey -> T.Text -> IO ()
+setLog k v = 
+  modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
 {-# NOINLINE globalSharedMutableSingletonState #-}
 globalSharedMutableSingletonState :: TBQueue Span
