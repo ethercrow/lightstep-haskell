@@ -28,14 +28,14 @@ import System.Timeout
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
 globalSharedMutableSpanStacks = unsafePerformIO (newMVar mempty)
 
-data LogEntryKey =  ErrorKind | Event | Message | Stack | Custom String
+data LogEntryKey =  ErrorKind | Event | Message | Stack | Custom T.Text
 
 showLogEntryKey :: LogEntryKey -> T.Text
 showLogEntryKey ErrorKind  = T.pack "error.kind"
 showLogEntryKey Event      = T.pack "event"
 showLogEntryKey Message    = T.pack "message"
 showLogEntryKey Stack      = T.pack "stack"
-showLogEntryKey (Custom x) = T.pack x
+showLogEntryKey (Custom x) = x
 
 withSpan :: MonadIO m => MonadMask m => T.Text -> m a -> m a
 withSpan opName action =
