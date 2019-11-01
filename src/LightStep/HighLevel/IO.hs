@@ -1,25 +1,30 @@
-module LightStep.HighLevel.IO 
-  ( module LightStep.HighLevel.IO
-  , module LightStep.LowLevel
-  ) where
+{-# LANGUAGE OverloadedStrings #-}
+
+module LightStep.HighLevel.IO
+  ( module LightStep.HighLevel.IO,
+    module LightStep.LowLevel,
+  )
+where
 
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import Control.Exception.Safe
 import Control.Lens
-import Control.Monad.Catch
 import Control.Monad.Except
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe
 import Data.ProtoLens.Message (defMessage)
+import qualified Data.Text as T
+import GHC.Conc
 import LightStep.Internal.Debug
 import LightStep.LowLevel
 import Proto.Collector
 import Proto.Collector_Fields
 import System.IO.Unsafe
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
+import System.Timeout
 
-{-# noinline globalSharedMutableSpanStacks #-}
+{-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
 globalSharedMutableSpanStacks = unsafePerformIO (newMVar mempty)
 
@@ -32,15 +37,15 @@ showLogEntryKey Message    = T.pack "message"
 showLogEntryKey Stack      = T.pack "stack"
 showLogEntryKey (Custom x) = T.pack x
 
-withSpan :: T.Text -> IO a -> IO a
+withSpan :: MonadIO m => MonadMask m => T.Text -> m a -> m a
 withSpan opName action =
   bracket
     (pushSpan opName)
-    popSpan 
-    (const action)
+    popSpan
+    (const (onException action (setTag "error" "true")))
 
-pushSpan :: T.Text -> IO ()
-pushSpan opName = do
+pushSpan :: MonadIO m => T.Text -> m ()
+pushSpan opName = liftIO $ do
   sp <- startSpan opName
   tId <- myThreadId
   modifyMVar_ globalSharedMutableSpanStacks $ \stacks ->
@@ -48,32 +53,38 @@ pushSpan opName = do
       [] -> do
         pure $! HM.insert tId [sp] stacks
       (psp : _) ->
-        let !sp' = sp
-              & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ (psp ^. spanContext)]
-              & spanContext.traceId .~ (psp ^. spanContext.traceId)
-        in pure $! HM.update (Just . (sp' :)) tId stacks
+        let !sp' =
+              sp
+                & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ (psp ^. spanContext)]
+                & spanContext . traceId .~ (psp ^. spanContext . traceId)
+         in pure $! HM.update (Just . (sp' :)) tId stacks
 
-popSpan :: () -> IO ()
-popSpan () = do
+popSpan :: MonadIO m => () -> m ()
+popSpan () = liftIO $ do
   tId <- myThreadId
-  sp <- modifyMVar globalSharedMutableSpanStacks
-    (\stacks ->
-      let (sp : sps) = stacks HM.! tId
-          !stacks' = HM.insert tId sps stacks
-      in pure (stacks', sp))
+  sp <-
+    modifyMVar
+      globalSharedMutableSpanStacks
+      ( \stacks ->
+          let (sp : sps) = stacks HM.! tId
+              !stacks' = HM.insert tId sps stacks
+           in pure (stacks', sp)
+      )
   sp' <- finishSpan sp
   submitSpan sp'
 
-modifyCurrentSpan :: (Span -> Span) -> IO ()
-modifyCurrentSpan f = do
+modifyCurrentSpan :: MonadIO m => (Span -> Span) -> m ()
+modifyCurrentSpan f = liftIO $ do
   tId <- myThreadId
-  modifyMVar_ globalSharedMutableSpanStacks
-    (\stacks ->
-      let (sp : sps) = stacks HM.! tId
-          !stacks' = HM.insert tId (f sp : sps) stacks
-      in pure stacks')
+  modifyMVar_
+    globalSharedMutableSpanStacks
+    ( \stacks ->
+        let (sp : sps) = stacks HM.! tId
+            !stacks' = HM.insert tId (f sp : sps) stacks
+         in pure stacks'
+    )
 
-setTag :: T.Text -> T.Text -> IO ()
+setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
 
@@ -87,57 +98,62 @@ globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 100
 
 withSingletonLightStep :: LightStepConfig -> IO () -> IO ()
 withSingletonLightStep cfg action = do
+  client <- mkClient cfg
+  d_ $ "Connected to LightStep " <> lsHostName cfg <> ":" <> show (lsPort cfg)
   doneVar <- newEmptyMVar
-  race_ (action >> waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar) $ do
-    let work client = do
-          d_ "Getting more spans"
-          spans <- liftIO $ atomically $ do
-            x <- readTBQueue globalSharedMutableSingletonState
-            xs <- flushTBQueue globalSharedMutableSingletonState
-            pure (x : xs)
-          d_ $ "Got " <> show (length spans) <> " spans"
-          reportSpansRes <- try (reportSpans client spans)
-          case reportSpansRes of
-            Right () ->
-              d_ $ "Reported " <> show (length spans) <> " spans"
-            Left (err :: SomeException) ->
-              d_ $ "Error while reporting spans: " <> show err
-        shutdown client = do
-          d_ "Getting the last spans before shutdown"
-          spans <- liftIO $ atomically $ flushTBQueue globalSharedMutableSingletonState
-          d_ $ "Got " <> show (length spans) <> " spans"
-          when (not $ null spans) $
-            reportSpans client spans
-          d_ $ "Reported " <> show (length spans) <> " spans"
-          closeClient client
-          d_ "Client closed"
-          liftIO $ putMVar doneVar ()
-    runExceptT
-      $ bracket
-        (mkClient cfg)
-        shutdown
-      $ \client -> do
-        let loop = do
-              work client
-              loop
-        loop
-    pure ()
+  let work = do
+        d_ "Getting more spans"
+        sps <- atomically $ do
+          x <- readTBQueue globalSharedMutableSingletonState
+          xs <- flushTBQueue globalSharedMutableSingletonState
+          pure (x : xs)
+        d_ $ "Got " <> show (length sps) <> " spans"
+        reportSpansRes <- tryAny (reportSpans client sps)
+        case reportSpansRes of
+          Right () ->
+            d_ $ "Reported " <> show (length sps) <> " spans"
+          Left err ->
+            d_ $ "Error while reporting spans: " <> show err
+      shutdown = do
+        d_ "Getting the last spans before shutdown"
+        sps <- atomically $ flushTBQueue globalSharedMutableSingletonState
+        when (not $ null sps) $ do
+          d_ $ "Got " <> show (length sps) <> " spans"
+          reportSpans client sps
+          d_ $ "Reported " <> show (length sps) <> " spans"
+        d_ "No more spans"
+        closeClient client
+        d_ "Client closed"
+        putMVar doneVar ()
+  race_ action $ do
+    tid <- myThreadId
+    labelThread tid "LightStep reporter"
+    fix $ \loop -> do
+      work
+      loop
+  race_
+    shutdown
+    (waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar)
 
 submitSpan :: Span -> IO ()
-submitSpan = atomically . writeTBQueue globalSharedMutableSingletonState
+submitSpan sp = do
+  written <- atomically $ tryWriteTBQueue globalSharedMutableSingletonState sp
+  when (not written) $ do
+    d_ "internal span queue is full, dropping the span"
 
--- TODO: handle span batches larger that queue size
+tryWriteTBQueue :: TBQueue a -> a -> STM Bool
+tryWriteTBQueue q a = isFullTBQueue q >>= \case
+  True -> pure False
+  _ -> do
+    writeTBQueue q a
+    pure True
+
 submitSpans :: Foldable f => f Span -> IO ()
-submitSpans = atomically . mapM_ (writeTBQueue globalSharedMutableSingletonState)
+submitSpans = atomically . mapM_ (tryWriteTBQueue globalSharedMutableSingletonState)
 
 waitUntilDone :: Int -> MVar () -> IO ()
-waitUntilDone timeoutSeconds doneVar =
-  race_
-    ( do
-        threadDelay $ 1_000_000 * timeoutSeconds
-        d_ "waitUntilDone: timeout"
-    )
-    ( do
-        takeMVar doneVar
-        d_ "waitUntilDone: done"
-    )
+waitUntilDone timeoutSeconds doneVar = do
+  d_ "waitUntilDone begin"
+  timeout (1_000_000 * timeoutSeconds) $ do
+    takeMVar doneVar
+  d_ "waitUntilDone: done"

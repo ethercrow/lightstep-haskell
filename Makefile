@@ -32,8 +32,8 @@ weeder:
 
 .PHONY: format
 format:
-	find src -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace '{}' \;
-	find cli -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace '{}' \;
+	find src -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace --ghc-opt -XBangPatterns '{}' \;
+	find cli -name '*.hs' -exec echo "Formatting '{}'" \; -exec ormolu --mode=inplace --ghc-opt -XBangPatterns '{}' \;
 
 .PHONY: watch
 watch:
