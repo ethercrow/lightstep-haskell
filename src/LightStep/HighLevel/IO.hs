@@ -88,7 +88,7 @@ setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
 
-setLog :: LogEntryKey -> T.Text -> IO ()
+addLog :: LogEntryKey -> T.Text -> IO ()
 setLog k v = 
   modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
