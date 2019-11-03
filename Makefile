@@ -20,7 +20,7 @@ proto:
 
 .PHONY: cabal-build
 cabal-build:
-	cabal new-build
+	cabal v2-build
 
 .PHONY: stack-build
 stack-build:

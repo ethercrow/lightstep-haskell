@@ -72,18 +72,20 @@ library
     , bytestring
     , chronos
     , containers
-    , safe-exceptions
+    , http-types
     , http2-client >= 0.9.0.0
-    , http2-client-grpc >= 0.7.0.0
+    , http2-client-grpc >= 0.8.0.0
+    , http2-grpc-proto-lens >= 0.1.0.0
     , lens
     , mtl
     , proto-lens >= 0.5.1.0
+    , proto-lens-protobuf-types >= 0.5.0.0
     , proto-lens-runtime >= 0.5.0.0
+    , safe-exceptions
     , stm
     , text
     , transformers
     , unordered-containers
-    , http-types
     , wai
 
 executable lightstep-haskell-example

@@ -14,6 +14,10 @@ jobs:
       with:
         ghc-version: '8.6.5'
         cabal-version: '3.0'
+    - name: Install protobuf compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
     - name: Update package database
       run: |
         cabal v2-update
