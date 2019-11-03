@@ -1,8 +1,27 @@
 name: Build
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
 
 jobs:
-  build-linux:
+  linux-cabal:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.6.5'
+        cabal-version: '3.0'
+    - name: Update package database
+      run: |
+        cabal v2-update
+    - name: Build
+      run: |
+        cabal v2-build
+
+  linux-stack-lts-14:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v1
@@ -14,7 +33,7 @@ jobs:
       run: |
         stack build --fast
 
-  build-macos:
+  macos-stack-lts-14:
     runs-on: macOS-10.14
     steps:
     - uses: actions/checkout@v1
