@@ -89,7 +89,7 @@ setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
 
 addLog :: LogEntryKey -> T.Text -> IO ()
-setLog k v = 
+addLog k v =
   modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
 {-# NOINLINE globalSharedMutableSingletonState #-}
