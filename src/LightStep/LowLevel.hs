@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import LightStep.Internal.Debug
 import Network.GRPC.Client
 import Network.GRPC.Client.Helpers
+import Network.GRPC.HTTP2.ProtoLens
 import Network.HTTP2.Client
 import Proto.Collector
 import Proto.Collector_Fields
