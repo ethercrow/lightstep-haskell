@@ -116,6 +116,7 @@ closeClient LightStepClient {lscGrpcVar} = do
 startSpan :: T.Text -> IO Span
 startSpan op = do
   nanosSinceEpoch <- getTime <$> now
+  -- FIXME: make those ids randomer
   let sid = fromIntegral nanosSinceEpoch
       tid = fromIntegral nanosSinceEpoch
   pure $

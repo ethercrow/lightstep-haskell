@@ -5,6 +5,7 @@ module Network.Wai.Middleware.LightStep where
 import qualified Data.Text as T
 import LightStep.HighLevel.IO
 import qualified Data.Text.Encoding as T
+import LightStep.Propagation
 import Network.Wai
 import Network.HTTP.Types
 
@@ -14,6 +15,9 @@ import Network.HTTP.Types
 tracingMiddleware :: Application -> Application
 tracingMiddleware app = \req sendResp -> do
   withSpan "WAI handler" $ do
+    case extractSpanContextFromRequest req of
+      Just ctx -> setParentSpanContext ctx
+      _ -> pure ()
     setTag "span.kind" "server"
     setTag "component" "http"
     setTag "http.method" $ T.decodeUtf8 (requestMethod req)
