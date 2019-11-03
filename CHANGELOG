@@ -1,3 +1,6 @@
+0.4.0:
+  * Support GHC-8.8
+
 0.3.0:
   * Introduce Network.Wai.Middleware.LightStep
   * Implement SpanContext (de)serialization into `ot-tracer-{trace,span}id` headers
