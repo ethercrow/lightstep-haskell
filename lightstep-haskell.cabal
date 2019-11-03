@@ -118,3 +118,19 @@ executable lightstep-haskell-wai-example
     , text
     , wai
     , warp
+
+executable lightstep-haskell-req-example
+  import: options
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+  main-is: Main.hs
+  hs-source-dirs:
+      examples/req
+  build-depends:
+      base >=4.9 && <5
+    , lightstep-haskell
+    , http-types
+    , text
+    , req >= 3.0.0

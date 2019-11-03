@@ -2,6 +2,7 @@
 
 module LightStep.Propagation where
 
+import Data.Bits
 import Control.Lens
 import Data.List (foldl')
 import qualified Data.ByteString as BS
@@ -25,35 +26,43 @@ extractSpanContextFromRequestHeaders hdrs =
     _ -> Nothing
   where
   -- TODO: Zipkin style propagation
-  -- go (_, sid) ("x-b3-traceid", parse64 -> Just x) = (Just x, sid)
-  -- go (tid, _) ("x-b3-spanid", parse64 -> Just x) = (tid, Just x)
 
-  go (_, sid) ("ot-tracer-traceid", parse64 -> Just tid) = (Just tid, sid)
-  go (tid, _) ("ot-tracer-spanid", parse64 -> Just sid) = (tid, Just sid)
+  go (_, sid) ("ot-tracer-traceid", decode_u64 -> Just tid) = (Just tid, sid)
+  go (tid, _) ("ot-tracer-spanid", decode_u64 -> Just sid) = (tid, Just sid)
 
   -- TODO: Propagation of the whole span context in a single header
   -- go _ ("x-ot-span-context", parse128 -> Just (tid, sid)) = (Just tid, Just sid)
 
   go acc _ = acc
 
-  parse64 :: BS.ByteString -> Maybe Word64
-  parse64 bytes = case BS.unpack bytes of
-    -- TODO: a better way to decode base16
-    [b0, b1, b2, b3, b4, b5, b6, b7] | BS.all (\d -> (d >= 48 && d < 57) || (d >= 97 && d < 123)) bytes ->
-      Just $
-        convertByte b0 * 256 * 256 * 256 * 16 +
-        convertByte b1 * 256 * 256 * 256 +
-        convertByte b2 * 256 * 256 * 16 +
-        convertByte b3 * 256 * 256 +
-        convertByte b4 * 256 * 16 +
-        convertByte b5 * 256 +
-        convertByte b6 * 16 +
-        convertByte b7
-    _ -> Nothing
 
   -- parse128 :: BS.ByteString -> Maybe (Word64, Word64)
   -- parse128 _ = Nothing -- TODO
 
-  convertByte :: Word8 -> Word64
-  convertByte d | d < 57 = fromIntegral d - 48
-  convertByte d = fromIntegral d - 87
+headersForSpanContext :: SpanContext -> [(BS.ByteString, BS.ByteString)]
+headersForSpanContext ctx =
+  [ ("ot-tracer-traceid", encode_u64 $ ctx ^. traceId)
+  , ("ot-tracer-spanid", encode_u64 $ ctx ^. spanId)
+  ]
+
+encode_u64 :: Word64 -> BS.ByteString
+-- TODO: a better way to encode base16
+encode_u64 x =
+  let encodeChar :: Word8 -> Word8
+      encodeChar c | c < 10 = 48 + c
+      encodeChar c = 87 + c
+      hexDigits = go 16 [] x
+      go :: Int -> [Word8] -> Word64 -> [Word8]
+      go 0 acc _ = acc
+      go n acc v = go (n - 1) (encodeChar (fromIntegral v .&. 0x0f) : acc) (v `div` 16)
+  in BS.pack hexDigits
+
+decode_u64 :: BS.ByteString -> Maybe Word64
+decode_u64 bytes | BS.length bytes /= 16 = Nothing
+decode_u64 bytes = BS.foldl' go (Just 0) bytes
+  where
+  go Nothing _ = Nothing
+  go (Just !result) d | d >= 48 && d < 58 = Just $ result * 16 + fromIntegral d - 48
+  go (Just result) d | d >= 97 && d < 124 = Just $ result * 16 + fromIntegral d - 87
+  go _ _ = Nothing
+

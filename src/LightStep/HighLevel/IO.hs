@@ -84,6 +84,17 @@ modifyCurrentSpan f = liftIO $ do
          in pure stacks'
     )
 
+currentSpanContext :: MonadIO m => m (Maybe SpanContext)
+currentSpanContext = liftIO $ do
+  tId <- myThreadId
+  stacks <- readMVar globalSharedMutableSpanStacks
+  let ctx =
+        case stacks HM.! tId of
+          (sp : _) -> Just $ sp ^. spanContext
+          _ -> Nothing
+  pure ctx
+    
+
 setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
   modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
