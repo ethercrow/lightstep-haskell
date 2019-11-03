@@ -31,6 +31,7 @@ common options
     ScopedTypeVariables
     TupleSections
     TypeApplications
+    ViewPatterns
   ghc-options:
     -Wall
     -Wcompat
@@ -50,6 +51,7 @@ library
       LightStep.LowLevel
       LightStep.HighLevel.IO
       LightStep.Internal.Debug
+      LightStep.Propagation
       Network.Wai.Middleware.LightStep
   other-modules:
       Paths_lightstep_haskell
@@ -67,6 +69,7 @@ library
   build-depends:
       base >=4.12 && <5
     , async
+    , bytestring
     , chronos
     , containers
     , safe-exceptions

@@ -92,6 +92,11 @@ addLog :: LogEntryKey -> T.Text -> IO ()
 addLog k v =
   modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
+setParentSpanContext :: MonadIO m => SpanContext -> m ()
+setParentSpanContext ctx = modifyCurrentSpan $ \sp -> sp
+  & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ ctx]
+  & spanContext . traceId .~ (ctx ^. traceId)
+
 {-# NOINLINE globalSharedMutableSingletonState #-}
 globalSharedMutableSingletonState :: TBQueue Span
 globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 100

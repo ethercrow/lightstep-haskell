@@ -1,5 +1,5 @@
 
-README.md: README.template.md cli/Main.hs
+README.md: README.template.md examples/readme/Main.hs
 	# robust webscale enterprise ready templating system
 	cat README.template.md > README.md
 	echo '```haskell' >> README.md
@@ -46,4 +46,4 @@ release: stack-build README.md
 
 .PHONY: vim
 vim:
-	echo ":e package.yaml\n:vsplit\n:e cli/Main.hs\n:vsplit\n:Ghcid\n:term" | nvim -s -
+	echo ":e lightstep-haskell.cabal\n:vsplit\n:e examples/readme/Main.hs\n:vsplit\n:term" | nvim -s -

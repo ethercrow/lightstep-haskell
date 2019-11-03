@@ -19,7 +19,7 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Data.Maybe
 import qualified Data.Text as T
-import LightStep.HighLevel.IO (LightStepConfig (..), setTag, withSingletonLightStep, withSpan)
+import LightStep.HighLevel.IO (LightStepConfig (..), LogEntryKey (..), addLog, setTag, withSingletonLightStep, withSpan)
 import System.Environment
 import System.Exit
 
@@ -37,6 +37,8 @@ seriousBusinessMain = concurrently_ frontend backend
         withSpan "GraphQL" $ do
           threadDelay 40000
           setTag "foo" "quux"
+          addLog Event "monkey-job"
+          addLog (Custom "foo") "bar"
           withSpan "Mongodb" $ do
             threadDelay 50000
           setTag "lorem" "ipsum"

@@ -1,5 +1,6 @@
 0.3.0:
   * Introduce Network.Wai.Middleware.LightStep
+  * Implement SpanContext extraction from `ot-tracer-{trace,span}id` headers
   * Move examples under examples/ directory now that there is more than one
 
 0.2.0:
