@@ -1,9 +1,9 @@
-resolver: nightly-2019-07-02
+resolver: lts-14.12
 
 packages:
 - .
 
 extra-deps:
+- http2-client-0.9.0.0
 - http2-client-grpc-0.7.0.0
 - http2-grpc-types-0.4.0.0
-- http2-client-0.9.0.0
