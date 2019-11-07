@@ -30,6 +30,9 @@ jobs:
 
   linux-stack-lts-14:
     runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        stack-yaml: ['stack.yaml', 'stack-8.8.1.yaml']
     steps:
     - uses: actions/checkout@v1
     - name: Install protobuf compiler
@@ -39,13 +42,16 @@ jobs:
     - name: Install stack
       run: which stack || curl -sSL https://get.haskellstack.org/ | sh
     - name: Install GHC
-      run: stack setup
+      run: stack setup --stack-yaml ${{ matrix.stack-yaml }}
     - name: Build
       run: |
-        stack build --fast
+        stack build --fast --stack-yaml ${{ matrix.stack-yaml }}
 
   macos-stack-lts-14:
     runs-on: macOS-10.14
+    strategy:
+      matrix:
+        stack-yaml: ['stack.yaml', 'stack-8.8.1.yaml']
     steps:
     - uses: actions/checkout@v1
     - name: Install protobuf compiler
@@ -54,7 +60,7 @@ jobs:
     - name: Install stack
       run: which stack || curl -sSL https://get.haskellstack.org/ | sh
     - name: Install GHC
-      run: stack setup
+      run: stack setup --stack-yaml ${{ matrix.stack-yaml }}
     - name: Build
       run: |
-        stack build --fast
+        stack build --fast --stack-yaml ${{ matrix.stack-yaml }}
