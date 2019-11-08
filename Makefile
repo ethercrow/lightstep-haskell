@@ -47,3 +47,17 @@ release: stack-build README.md
 .PHONY: vim
 vim:
 	echo ":e lightstep-haskell.cabal\n:vsplit\n:e examples/readme/Main.hs\n:vsplit\n:term" | nvim -s -
+
+deps.png: lightstep-haskell.cabal stack.yaml
+	stack dot lightstep-haskell \
+		--external \
+		--no-include-base \
+		--prune base,lens,array,bytestring,containers,deepseq,directory,filepath,mtl,parsec,pretty,process,stm,template-haskell,text,time,transformers,unix \
+		| dot -Tpng -o $@
+
+deps-tree.txt: lightstep-haskell.cabal stack.yaml
+	stack ls dependencies tree lightstep-haskell \
+		--no-include-base \
+		--prune base,lens,array,bytestring,containers,deepseq,directory,filepath,ghc-prim,mtl,parsec,pretty,process,rts,stm,template-haskell,text,time,transformers,unix,http2,http2-grpc-proto-lens,http2-grpc-types,http2-client-grpc,http2-client,proto-lens-runtime,proto-lens-setup,proto-lens,proto-lens-protobuf-types \
+    | tee $@
+

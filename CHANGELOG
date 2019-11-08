@@ -1,3 +1,6 @@
+0.4.1:
+  * Add `lightstep.tracer_version` to global tags
+
 0.4.0:
   * Support GHC-8.8
 

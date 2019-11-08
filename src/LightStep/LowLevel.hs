@@ -21,6 +21,8 @@ import Proto.Collector
 import Proto.Collector_Fields
 import Proto.Google.Protobuf.Timestamp_Fields
 import System.Timeout
+import Data.Version (showVersion)
+import Paths_lightstep_haskell (version)
 
 data LightStepClient
   = LightStepClient
@@ -77,9 +79,9 @@ mkClient cfg@LightStepConfig {..} = do
       defMessage
         & reporterId .~ 2
         & tags
-          .~ [ defMessage & key .~ "span.kind" & stringValue .~ "server",
-               defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
-               defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell"
+          .~ [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
+               defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
+               defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
              ]
 
 makeGrpcClient :: LightStepClient -> IO GrpcClient
