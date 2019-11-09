@@ -48,7 +48,7 @@ jobs:
         stack build --fast --stack-yaml ${{ matrix.stack-yaml }}
 
   macos-stack-lts-14:
-    runs-on: macOS-10.14
+    runs-on: macOS-latest
     strategy:
       matrix:
         stack-yaml: ['stack.yaml', 'stack-8.8.1.yaml']
