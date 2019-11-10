@@ -48,7 +48,8 @@ headersForSpanContext ctx =
 b3headersForSpanContext :: SpanContext -> [(BS.ByteString, BS.ByteString)]
 b3headersForSpanContext ctx =
   [ ("x-b3-traceid", encode_u64 $ ctx ^. traceId),
-    ("x-b3-spanid", encode_u64 $ ctx ^. spanId)
+    ("x-b3-spanid", encode_u64 $ ctx ^. spanId),
+    ("x-b3-sampled", "true")
   ]
 
 encode_u64 :: Word64 -> BS.ByteString
