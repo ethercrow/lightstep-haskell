@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:           lightstep-haskell
-version:        0.4.1
+version:        0.4.2
 synopsis:       LightStep OpenTracing client library
 description:    LightStep OpenTracing client library. Uses GRPC transport via proto-lens.
 category:       Tools
@@ -88,8 +88,18 @@ library
     , unordered-containers
     , wai
 
+flag examples
+  description: Build example executables
+  default: False
+
+common example
+  if flag(examples)
+    buildable: True
+  else
+    buildable: False
+
 executable lightstep-haskell-example
-  import: options
+  import: options, example
   ghc-options:
     -threaded
     -rtsopts
@@ -105,7 +115,7 @@ executable lightstep-haskell-example
     , text
 
 executable lightstep-haskell-wai-example
-  import: options
+  import: options, example
   ghc-options:
     -threaded
     -rtsopts
@@ -122,7 +132,7 @@ executable lightstep-haskell-wai-example
     , warp
 
 executable lightstep-haskell-req-example
-  import: options
+  import: options, example
   ghc-options:
     -threaded
     -rtsopts

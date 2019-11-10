@@ -26,7 +26,7 @@ jobs:
         cabal v2-update
     - name: Build
       run: |
-        cabal v2-build
+        cabal v2-build -f examples
 
   linux-stack-lts-14:
     runs-on: ubuntu-18.04
@@ -45,7 +45,7 @@ jobs:
       run: stack setup --stack-yaml ${{ matrix.stack-yaml }}
     - name: Build
       run: |
-        stack build --fast --stack-yaml ${{ matrix.stack-yaml }}
+        stack build --flag lightstep-haskell:examples --fast --stack-yaml ${{ matrix.stack-yaml }}
 
   macos-stack-lts-14:
     runs-on: macOS-latest
@@ -63,4 +63,4 @@ jobs:
       run: stack setup --stack-yaml ${{ matrix.stack-yaml }}
     - name: Build
       run: |
-        stack build --fast --stack-yaml ${{ matrix.stack-yaml }}
+        stack build --flag lightstep-haskell:examples --fast --stack-yaml ${{ matrix.stack-yaml }}
