@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:           lightstep-haskell
-version:        0.4.2
+version:        0.4.3
 synopsis:       LightStep OpenTracing client library
 description:    LightStep OpenTracing client library. Uses GRPC transport via proto-lens.
 category:       Tools

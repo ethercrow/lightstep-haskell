@@ -1,3 +1,6 @@
+0.4.3:
+  * Support B3 context propagation headers (only 64bit trace id)
+
 0.4.2:
   * Make example executables not buildable by default. Use `cabal v2-build -f examples` or `stack build --flag lightstep-haskell:examples` to opt in
 
