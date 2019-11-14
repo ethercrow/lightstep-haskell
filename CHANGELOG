@@ -1,3 +1,6 @@
+0.4.4:
+  * Always include x-b3-sampled=true in B3 context propagation headers
+
 0.4.3:
   * Support B3 context propagation headers (only 64bit trace id)
 
