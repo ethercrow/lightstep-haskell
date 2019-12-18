@@ -67,7 +67,9 @@ popSpan () = liftIO $ do
       globalSharedMutableSpanStacks
       ( \stacks ->
           let (sp : sps) = stacks HM.! tId
-              !stacks' = HM.insert tId sps stacks
+              !stacks' = case sps of
+                [] -> HM.delete tId stacks
+                _ -> HM.insert tId sps stacks
            in pure (stacks', sp)
       )
   sp' <- finishSpan sp
