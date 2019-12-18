@@ -1,3 +1,6 @@
+0.4.5:
+  * Fix a memory leak of several bytes per instrumented thread
+
 0.4.4:
   * Always include x-b3-sampled=true in B3 context propagation headers
 
