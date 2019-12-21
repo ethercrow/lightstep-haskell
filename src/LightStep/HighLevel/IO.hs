@@ -3,6 +3,7 @@
 module LightStep.HighLevel.IO
   ( module LightStep.HighLevel.IO,
     module LightStep.LowLevel,
+    module LightStep.Config,
   )
 where
 
@@ -23,6 +24,7 @@ import Proto.Collector
 import Proto.Collector_Fields
 import System.IO.Unsafe
 import System.Timeout
+import LightStep.Config
 
 {-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])

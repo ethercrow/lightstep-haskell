@@ -61,3 +61,6 @@ deps-tree.txt: lightstep-haskell.cabal stack.yaml
 		--prune base,lens,array,bytestring,containers,deepseq,directory,filepath,ghc-prim,mtl,parsec,pretty,process,rts,stm,template-haskell,text,time,transformers,unix,http2,http2-grpc-proto-lens,http2-grpc-types,http2-client-grpc,http2-client,proto-lens-runtime,proto-lens-setup,proto-lens,proto-lens-protobuf-types \
     | tee $@
 
+.PHONY: stress
+stress: stack-build
+	env GHCRTS="-T" stack exec lightstep-haskell-stress-test

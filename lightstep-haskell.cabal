@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:           lightstep-haskell
-version:        0.4.5
+version:        0.5.0
 synopsis:       LightStep OpenTracing client library
 description:    LightStep OpenTracing client library. Uses GRPC transport via proto-lens.
 category:       Tools
@@ -48,6 +48,7 @@ common options
 library
   import: options
   exposed-modules:
+      LightStep.Config
       LightStep.LowLevel
       LightStep.HighLevel.IO
       LightStep.Internal.Debug
@@ -146,3 +147,18 @@ executable lightstep-haskell-req-example
     , http-types
     , text
     , req >= 3.0.0
+
+executable lightstep-haskell-stress-test
+  import: options
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+  main-is: Main.hs
+  hs-source-dirs:
+      stress-test
+  build-depends:
+      base >=4.9 && <5
+    , lightstep-haskell
+    , text
+    , async

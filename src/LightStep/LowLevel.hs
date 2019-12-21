@@ -12,17 +12,18 @@ import Control.Exception.Safe
 import Control.Lens hiding (op)
 import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
+import Data.Version (showVersion)
+import LightStep.Config
 import LightStep.Internal.Debug
 import Network.GRPC.Client
 import Network.GRPC.Client.Helpers
 import Network.GRPC.HTTP2.ProtoLens
 import Network.HTTP2.Client
+import Paths_lightstep_haskell (version)
 import Proto.Collector
 import Proto.Collector_Fields
 import Proto.Google.Protobuf.Timestamp_Fields
 import System.Timeout
-import Data.Version (showVersion)
-import Paths_lightstep_haskell (version)
 
 data LightStepClient
   = LightStepClient
@@ -30,15 +31,6 @@ data LightStepClient
         lscToken :: T.Text,
         lscReporter :: Reporter,
         lscConfig :: LightStepConfig
-      }
-
-data LightStepConfig
-  = LightStepConfig
-      { lsHostName :: HostName,
-        lsPort :: PortNumber,
-        lsToken :: T.Text,
-        lsServiceName :: T.Text,
-        lsGracefulShutdownTimeoutSeconds :: Int
       }
 
 reportSpans :: LightStepClient -> [Span] -> IO ()
@@ -107,13 +99,13 @@ reconnectClient client@LightStepClient {lscGrpcVar} = do
   d_ "reconnectClient begin"
   newClient <- makeGrpcClient client
   oldClient <- swapMVar lscGrpcVar newClient
-  runExceptT $ close oldClient
+  _ <- runExceptT $ close oldClient
   d_ "reconnectClient end"
 
 closeClient :: LightStepClient -> IO ()
 closeClient LightStepClient {lscGrpcVar} = do
   grpc <- readMVar lscGrpcVar
-  runExceptT $ close grpc
+  _ <- runExceptT $ close grpc
   pure ()
 
 startSpan :: T.Text -> IO Span
