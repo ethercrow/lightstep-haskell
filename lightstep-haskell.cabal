@@ -120,7 +120,7 @@ executable lightstep-haskell-wai-example
   ghc-options:
     -threaded
     -rtsopts
-    -with-rtsopts=-N
+    "-with-rtsopts=-N -T -s"
   main-is: Main.hs
   hs-source-dirs:
       examples/wai
@@ -131,6 +131,7 @@ executable lightstep-haskell-wai-example
     , text
     , wai
     , warp
+    , bytestring
 
 executable lightstep-haskell-req-example
   import: options, example
@@ -153,7 +154,7 @@ executable lightstep-haskell-stress-test
   ghc-options:
     -threaded
     -rtsopts
-    -with-rtsopts=-N
+    "-with-rtsopts=-N -T"
   main-is: Main.hs
   hs-source-dirs:
       stress-test
