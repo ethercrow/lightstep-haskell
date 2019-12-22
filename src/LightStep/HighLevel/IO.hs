@@ -53,7 +53,9 @@ pushSpan opName = liftIO $ do
   modifyMVar_ globalSharedMutableSpanStacks $ \stacks ->
     case fromMaybe [] (HM.lookup tId stacks) of
       [] -> do
-        pure $! HM.insert tId [sp] stacks
+        let !sp' = sp
+              & tags %~ (<> [defMessage & key .~ "thread" & stringValue .~ T.pack (show tId)])
+        pure $! HM.insert tId [sp'] stacks
       (psp : _) ->
         let !sp' =
               sp
