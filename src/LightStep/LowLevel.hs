@@ -14,6 +14,7 @@ import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
 import Data.Version (showVersion)
 import LightStep.Config
+import LightStep.Diagnostics
 import LightStep.Internal.Debug
 import Network.GRPC.Client
 import Network.GRPC.Client.Helpers
@@ -48,6 +49,7 @@ reportSpans client@LightStepClient {..} sps = do
                       & reporter .~ lscReporter
                   )
         req `withException` (\err -> d_ $ "reportSpans failed: " <> show (err :: SomeException))
+  inc (length sps) reportedSpanCountVar
   ret <- tryOnce
   ret2 <- case ret of
     Nothing -> do
@@ -56,6 +58,10 @@ reportSpans client@LightStepClient {..} sps = do
       -- one retry after reconnect
       tryOnce
     _ -> pure ret
+  case ret2 of
+    Nothing ->
+      inc (length sps) rejectedSpanCountVar
+    _ -> pure ()
   d_ $ show ret2
   pure ()
 
@@ -101,6 +107,7 @@ makeGrpcClient client = do
 reconnectClient :: LightStepClient -> IO ()
 reconnectClient client@LightStepClient {lscGrpcVar} = do
   d_ "reconnectClient begin"
+  inc 1 reconnectCountVar
   newClient <- makeGrpcClient client
   oldClient <- swapMVar lscGrpcVar newClient
   _ <- runExceptT $ close oldClient
@@ -114,6 +121,7 @@ closeClient LightStepClient {lscGrpcVar} = do
 
 startSpan :: T.Text -> IO Span
 startSpan op = do
+  inc 1 startedSpanCountVar
   nanosSinceEpoch <- getTime <$> now
   -- FIXME: make those ids randomer
   let sid = fromIntegral nanosSinceEpoch
@@ -131,6 +139,7 @@ startSpan op = do
 
 finishSpan :: Span -> IO Span
 finishSpan sp = do
+  inc 1 finishedSpanCountVar
   nanosSinceEpoch <- getTime <$> now
   let dur =
         (nanosSinceEpoch - (sp ^. startTimestamp . seconds) * 1_000_000_000 - fromIntegral (sp ^. startTimestamp . nanos))
