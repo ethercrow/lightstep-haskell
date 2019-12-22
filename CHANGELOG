@@ -1,6 +1,7 @@
 0.5.0:
   * Introduce getEnvConfig
   * [Highlevel.IO] Auto-tag root spans with a thread id
+  * Introduce LightStep.Diagnostics module that exposes some internal metrics that may be of interest when debugging or optimizing this library
 
 0.4.5:
   * [Highlevel.IO] Fix a memory leak of several bytes per instrumented thread

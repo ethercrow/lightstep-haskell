@@ -19,6 +19,7 @@ import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
 import GHC.Conc
 import LightStep.Internal.Debug
+import LightStep.Diagnostics
 import LightStep.LowLevel
 import Proto.Collector
 import Proto.Collector_Fields
@@ -167,6 +168,7 @@ submitSpan sp = do
   written <- atomically $ tryWriteTBQueue globalSharedMutableSingletonState sp
   when (not written) $ do
     d_ "internal span queue is full, dropping the span"
+    inc 1 droppedSpanCountVar
 
 tryWriteTBQueue :: TBQueue a -> a -> STM Bool
 tryWriteTBQueue q a = isFullTBQueue q >>= \case

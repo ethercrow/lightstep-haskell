@@ -49,9 +49,10 @@ library
   import: options
   exposed-modules:
       LightStep.Config
-      LightStep.LowLevel
       LightStep.HighLevel.IO
       LightStep.Internal.Debug
+      LightStep.LowLevel
+      LightStep.Diagnostics
       LightStep.Propagation
       Network.Wai.Middleware.LightStep
   other-modules:
