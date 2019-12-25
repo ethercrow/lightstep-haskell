@@ -2,11 +2,7 @@
 
 import Control.Concurrent
 import Control.Concurrent.Async
-import Data.Maybe
-import qualified Data.Text as T
-import LightStep.HighLevel.IO (LightStepConfig (..), LogEntryKey (..), addLog, setTag, withSingletonLightStep, withSpan)
-import System.Environment
-import System.Exit
+import LightStep.HighLevel.IO (LogEntryKey (..), addLog, getEnvConfig, setTag, withSingletonLightStep, withSpan)
 
 seriousBusinessMain :: IO ()
 seriousBusinessMain = concurrently_ frontend backend
@@ -50,14 +46,11 @@ seriousBusinessMain = concurrently_ frontend backend
 
 main :: IO ()
 main = do
-  token <-
-    lookupEnv "LIGHTSTEP_TOKEN" >>= \case
-      Just t -> pure $ T.pack t
-      Nothing -> do
-        putStrLn "LIGHTSTEP_TOKEN environment variable not defined"
-        exitFailure
-  host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
-  port <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-  let lsConfig = LightStepConfig host port token "helloworld" 5
+  -- Construct a config from env variables
+  -- - LIGHTSTEP_ACCESS_TOKEN
+  -- - LIGHTSTEP_HOST (optional)
+  -- - LIGHTSTEP_PORT (optional)
+  -- - LIGHTSTEP_SERVICE (optional)
+  Just lsConfig <- getEnvConfig
   withSingletonLightStep lsConfig seriousBusinessMain
   putStrLn "All done"

@@ -71,10 +71,14 @@ mkClient cfg@LightStepConfig {..} = do
       defMessage
         & reporterId .~ 2
         & tags
-          .~ [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
-               defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
-               defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
-             ]
+          .~ ( [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
+                 defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
+                 defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
+               ]
+                 <> [ defMessage & key .~ k & stringValue .~ v
+                      | (k, v) <- lsGlobalTags
+                    ]
+             )
 
 makeGrpcClient :: LightStepClient -> IO GrpcClient
 makeGrpcClient client = do

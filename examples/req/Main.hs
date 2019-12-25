@@ -1,13 +1,10 @@
-{-# language OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 import Control.Concurrent
 import Data.Maybe
 import LightStep.HighLevel.IO
 import LightStep.Propagation (b3headersForSpanContext)
 import Network.HTTP.Req
-import qualified Data.Text as T
-import System.Environment
-import System.Exit
 
 clientMain :: IO ()
 clientMain = do
@@ -22,13 +19,5 @@ clientMain = do
 
 main :: IO ()
 main = do
-  token <-
-    lookupEnv "LIGHTSTEP_TOKEN" >>= \case
-      Just t -> pure $ T.pack t
-      Nothing -> do
-        putStrLn "LIGHTSTEP_TOKEN environment variable not defined"
-        exitFailure
-  host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
-  lsport <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-  let lsConfig = LightStepConfig host lsport token "example-req-client" 5
+  Just lsConfig <- getEnvConfig
   withSingletonLightStep lsConfig clientMain

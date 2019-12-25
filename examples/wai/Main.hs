@@ -1,16 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
 import GHC.Stats
-import LightStep.HighLevel.IO (LightStepConfig (..), withSingletonLightStep)
+import LightStep.HighLevel.IO (getEnvConfig, withSingletonLightStep)
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.LightStep
-import System.Environment
-import System.Exit
 
 robustScalableProductionReadyMicroservice :: Application
 robustScalableProductionReadyMicroservice = \_req respond -> do
@@ -23,15 +19,7 @@ robustScalableProductionReadyMicroservice = \_req respond -> do
 
 main :: IO ()
 main = do
-  token <-
-    lookupEnv "LIGHTSTEP_TOKEN" >>= \case
-      Just t -> pure $ T.pack t
-      Nothing -> do
-        putStrLn "LIGHTSTEP_TOKEN environment variable not defined"
-        exitFailure
-  host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
-  port <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-  let lsConfig = LightStepConfig host port token "example-wai-service" 5
-      microserviceWithTracing = tracingMiddleware robustScalableProductionReadyMicroservice
+  Just lsConfig <- getEnvConfig
+  let microserviceWithTracing = tracingMiddleware robustScalableProductionReadyMicroservice
   withSingletonLightStep lsConfig $
     run 8736 microserviceWithTracing

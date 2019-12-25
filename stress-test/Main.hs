@@ -3,12 +3,10 @@
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Monad
-import Data.Maybe
-import qualified Data.Text as T
 import GHC.Stats
 import LightStep.HighLevel.IO (LogEntryKey (..), addLog, getEnvConfig, setTag, withSingletonLightStep, withSpan)
-import System.Environment
 import System.Exit
+import Text.Printf
 
 seriousBusinessMain :: IO ()
 seriousBusinessMain = concurrently_ frontend backend
@@ -54,9 +52,9 @@ reportMemoryUsage :: IO ()
 reportMemoryUsage = do
   RTSStats {..} <- getRTSStats
   let GCDetails {..} = gc
-  print ("max_live_bytes", max_live_bytes)
-  print ("gcdetails_live_bytes", gcdetails_live_bytes)
-  when (max_live_bytes > 6_000_000) $ do
+  printf "max_live_bytes %d\n" max_live_bytes
+  printf "gcdetails_live_bytes %d\n" gcdetails_live_bytes
+  when (max_live_bytes > 10_000_000) $ do
     putStrLn "Ate too much memory"
     exitFailure
 
@@ -64,9 +62,9 @@ main :: IO ()
 main = do
   Just lsConfig <- getEnvConfig
   withSingletonLightStep lsConfig $ do
-    forM_ [0 .. 10] $ \_ -> do
+    replicateM_ 10 $ do
       reportMemoryUsage
-      forM_ [0 .. 1000] $ \_ -> do
-        async seriousBusinessMain
+      replicateM_ 1000 $ do
+        _ <- async seriousBusinessMain
         threadDelay 10000
   putStrLn "All done"
