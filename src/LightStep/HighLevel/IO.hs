@@ -25,6 +25,7 @@ import Proto.Collector_Fields
 import System.IO.Unsafe
 import System.Timeout
 import LightStep.Config
+import Data.Typeable
 
 {-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
@@ -39,12 +40,16 @@ showLogEntryKey Message    = T.pack "message"
 showLogEntryKey Stack      = T.pack "stack"
 showLogEntryKey (Custom x) = x
 
-withSpan :: MonadIO m => MonadMask m => T.Text -> m a -> m a
+withSpan :: forall m a. MonadIO m => MonadMask m => T.Text -> m a -> m a
 withSpan opName action =
-  bracket
+  let onExc :: SomeException -> m ()
+      onExc ex = do
+        setTag "error" "true"
+        setTag "error.message" (T.pack $ displayException ex)
+  in bracket
     (pushSpan opName)
     popSpan
-    (const (onException action (setTag "error" "true")))
+    (const (withException action onExc))
 
 pushSpan :: MonadIO m => T.Text -> m ()
 pushSpan opName = liftIO $ do
