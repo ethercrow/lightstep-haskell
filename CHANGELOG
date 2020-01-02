@@ -1,3 +1,6 @@
+0.5.1:
+  * Trace and span ids are now random instead of timestamps
+
 0.5.0:
   * Introduce getEnvConfig
   * [Highlevel.IO] Auto-tag root spans with a thread id

@@ -24,6 +24,7 @@ import Paths_lightstep_haskell (version)
 import Proto.Collector
 import Proto.Collector_Fields
 import Proto.Google.Protobuf.Timestamp_Fields
+import System.Random
 import System.Timeout
 
 data LightStepClient
@@ -123,9 +124,8 @@ startSpan :: T.Text -> IO Span
 startSpan op = do
   inc 1 startedSpanCountVar
   nanosSinceEpoch <- getTime <$> now
-  -- FIXME: make those ids randomer
-  let sid = fromIntegral nanosSinceEpoch
-      tid = fromIntegral nanosSinceEpoch
+  sid <- randomIO
+  let tid = sid
   pure $
     defMessage
       & operationName .~ op
