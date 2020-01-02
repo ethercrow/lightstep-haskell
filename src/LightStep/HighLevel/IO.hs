@@ -26,7 +26,6 @@ import Proto.Collector_Fields
 import System.IO.Unsafe
 import System.Timeout
 import LightStep.Config
-import Data.Typeable
 
 {-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])

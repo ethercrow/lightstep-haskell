@@ -20,15 +20,26 @@ data LightStepConfig
         lsGracefulShutdownTimeoutSeconds :: Int
       }
 
+lookupOneOfEnvs :: [String] -> IO (Maybe String)
+lookupOneOfEnvs names = asum <$> traverse lookupEnv names
+
+getEnvTagsWithPrefix :: T.Text -> IO [(T.Text, T.Text)]
+getEnvTagsWithPrefix prefix =
+  mapMaybe unprefix <$> getEnvironment
+  where
+    unprefix ((T.stripPrefix prefix . T.pack) -> Just k, v) = Just (k, T.pack v)
+    unprefix _ = Nothing
+
 getEnvConfig :: MonadIO m => m (Maybe LightStepConfig)
 getEnvConfig = liftIO $ do
-  maybe_token_from_env <- asum <$> traverse lookupEnv ["LIGHTSTEP_TOKEN", "LIGHTSTEP_ACCESS_TOKEN"]
+  maybe_token_from_env <- lookupOneOfEnvs ["LIGHTSTEP_TOKEN", "LIGHTSTEP_ACCESS_TOKEN", "OPENTRACING_LIGHTSTEP_ACCESS_TOKEN"]
+  global_tags <- getEnvTagsWithPrefix "OPENTRACING_TAG_"
   case maybe_token_from_env of
     Just t -> do
-      host <- fromMaybe "ingest.lightstep.com" <$> lookupEnv "LIGHTSTEP_HOST"
-      port <- maybe 443 read <$> lookupEnv "LIGHTSTEP_PORT"
-      service <- fromMaybe "example-haskell-service" <$> lookupEnv "LIGHTSTEP_SERVICE"
-      pure $ Just $ LightStepConfig host port (T.pack t) (T.pack service) [] 5
+      host <- fromMaybe "ingest.lightstep.com" <$> lookupOneOfEnvs ["LIGHTSTEP_HOST", "OPENTRACING_LIGHTSTEP_COLLECTOR_HOST"]
+      port <- maybe 443 read <$> lookupOneOfEnvs ["LIGHTSTEP_PORT", "OPENTRACING_LIGHTSTEP_COLLECTOR_PORT"]
+      service <- fromMaybe "example-haskell-service" <$> lookupOneOfEnvs ["LIGHTSTEP_SERVICE", "OPENTRACING_LIGHTSTEP_COMPONENT_NAME"]
+      pure $ Just $ LightStepConfig host port (T.pack t) (T.pack service) global_tags 5
     Nothing -> do
       hPutStrLn stderr "LIGHTSTEP_ACCESS_TOKEN environment variable not defined"
       pure Nothing
