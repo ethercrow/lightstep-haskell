@@ -2,10 +2,10 @@
 
 import Control.Concurrent
 import Control.Concurrent.Async
-import LightStep.HighLevel.IO (LogEntryKey (..), addLog, getEnvConfig, setTag, withSingletonLightStep, withSpan)
+import LightStep.HighLevel.IO (LogEntryKey (..), addLog, currentSpanContext, getEnvConfig, setParentSpanContext, setTag, withSingletonLightStep, withSpan)
 
 seriousBusinessMain :: IO ()
-seriousBusinessMain = concurrently_ frontend backend
+seriousBusinessMain = concurrently_ frontend backend >> threadDelay 1000000
   where
     frontend =
       withSpan "RESTful API" $ do
@@ -43,6 +43,25 @@ seriousBusinessMain = concurrently_ frontend backend
         withSpan "Hadoop" $ do
           threadDelay 100000
           setTag "learning" "super_deep"
+        withSpan "Parallel map reduce" $ do
+          result <- withSpan "Reduce" $ do
+            Just ctx <- currentSpanContext
+            (a, b) <- do
+              threadDelay 100000
+              concurrently
+                ( withSpan "Calculate a" $ do
+                    setParentSpanContext ctx
+                    threadDelay 100000
+                    return "Lorem "
+                )
+                ( withSpan "Calculate b" $ do
+                    setParentSpanContext ctx
+                    threadDelay 100000
+                    return "ipsum"
+                )
+            threadDelay 100000
+            pure (a <> b)
+          setTag "result" result
 
 main :: IO ()
 main = do
