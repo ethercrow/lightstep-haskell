@@ -89,10 +89,9 @@ modifyCurrentSpan f = liftIO $ do
   tId <- myThreadId
   modifyMVar_
     globalSharedMutableSpanStacks
-    ( \stacks ->
-        let (sp : sps) = stacks HM.! tId
-            !stacks' = HM.insert tId (f sp : sps) stacks
-         in pure stacks'
+    ( \stacks -> case HM.lookup tId stacks of
+        Just (sp : sps) -> pure $! HM.insert tId (f sp : sps) stacks
+        _ -> pure stacks
     )
 
 currentSpanContext :: MonadIO m => m (Maybe SpanContext)
