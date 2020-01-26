@@ -1,3 +1,6 @@
+0.5.2:
+  * Make `modifyCurrentSpan` and `currentSpanContext` functions safe to call not within a span
+
 0.5.1:
   * Trace and span ids are now random instead of timestamps
 
