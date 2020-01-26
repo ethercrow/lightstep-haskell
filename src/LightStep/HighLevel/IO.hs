@@ -100,8 +100,8 @@ currentSpanContext = liftIO $ do
   tId <- myThreadId
   stacks <- readMVar globalSharedMutableSpanStacks
   let ctx =
-        case stacks HM.! tId of
-          (sp : _) -> Just $ sp ^. spanContext
+        case HM.lookup tId stacks of
+          Just (sp : _) -> Just $ sp ^. spanContext
           _ -> Nothing
   pure ctx
     
