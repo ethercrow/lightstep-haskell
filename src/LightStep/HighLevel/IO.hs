@@ -4,6 +4,7 @@ module LightStep.HighLevel.IO
   ( module LightStep.HighLevel.IO,
     module LightStep.LowLevel,
     module LightStep.Config,
+    SpanContext,
   )
 where
 
