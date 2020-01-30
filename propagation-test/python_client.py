@@ -21,6 +21,8 @@ def before_sending_request(request):
         span.set_tag(opentracing.ext.tags.PEER_HOST_IPV4, host)
 
     carrier_dict = {}
+    print("Injecting context\n  trace id: ", span.context.trace_id)
+    print("  span id: ", span.context.span_id)
     span.tracer.inject(span.context, opentracing.Format.HTTP_HEADERS, carrier_dict)
     for k, v in carrier_dict.items():
         print(k, v)

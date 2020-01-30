@@ -3,11 +3,12 @@
 module Network.Wai.Middleware.LightStep where
 
 import qualified Data.Text as T
-import LightStep.HighLevel.IO
 import qualified Data.Text.Encoding as T
+import LightStep.HighLevel.IO
+import LightStep.Internal.Debug
 import LightStep.Propagation
-import Network.Wai
 import Network.HTTP.Types
+import Network.Wai
 
 -- Semantic conventions for HTTP spans:
 -- https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/data-http.md
@@ -17,6 +18,7 @@ tracingMiddleware app = \req sendResp -> do
   withSpan "WAI handler" $ do
     case extractSpanContextFromRequest req of
       Just ctx -> do
+        d_ $ "extracted context: " <> show ctx
         setParentSpanContext ctx
       _ -> pure ()
     setTag "span.kind" "server"

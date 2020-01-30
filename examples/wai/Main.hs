@@ -3,7 +3,7 @@
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import GHC.Stats
 import LightStep.Diagnostics
-import LightStep.HighLevel.IO (getEnvConfig, withSingletonLightStep)
+import LightStep.HighLevel.IO (getEnvConfig, withSingletonLightStep, withSpan)
 import Network.HTTP.Types
 import Network.Wai
 import Network.Wai.Handler.Warp (run)
@@ -11,7 +11,7 @@ import Network.Wai.Middleware.LightStep
 
 robustScalableProductionReadyMicroservice :: Application
 robustScalableProductionReadyMicroservice = \_req respond -> do
-  rtsStats <- getRTSStats
+  rtsStats <- withSpan "getRTSStats" getRTSStats
   diagnostics <- getDiagnostics
   respond $
     responseLBS

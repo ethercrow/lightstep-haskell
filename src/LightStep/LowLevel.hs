@@ -37,6 +37,7 @@ data LightStepClient
 
 reportSpans :: LightStepClient -> [Span] -> IO ()
 reportSpans client@LightStepClient {..} sps = do
+  print sps
   let tryOnce = do
         grpc <- readMVar lscGrpcVar
         let req =
