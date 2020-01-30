@@ -6,8 +6,8 @@ module LightStep.Propagation
   ) where
 
 import Control.Lens
-import Data.Bits
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import Data.List (foldl')
 import Data.ProtoLens.Message (defMessage)
 import GHC.Word
@@ -15,6 +15,7 @@ import Network.Wai
 import Proto.Collector as P
 import Proto.Collector_Fields as P
 import Data.String
+import Text.Printf
 
 extractSpanContextFromRequest :: Request -> Maybe SpanContext
 extractSpanContextFromRequest = extractSpanContextFromRequestHeaders . requestHeaders
@@ -56,16 +57,7 @@ b3headersForSpanContext ctx =
   ]
 
 encode_u64 :: Word64 -> BS.ByteString
--- TODO: a better way to encode base16
-encode_u64 x =
-  let encodeChar :: Word8 -> Word8
-      encodeChar c | c < 10 = 48 + c
-      encodeChar c = 87 + c
-      hexDigits = go 16 [] x
-      go :: Int -> [Word8] -> Word64 -> [Word8]
-      go 0 acc _ = acc
-      go n acc v = go (n - 1) (encodeChar (fromIntegral v .&. 0x0f) : acc) (v `div` 16)
-   in BS.pack hexDigits
+encode_u64 x = BS8.pack (printf "%016x" x)
 
 decode_u64 :: BS.ByteString -> Maybe Word64
 decode_u64 bytes | BS.length bytes > 16 = Nothing
