@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LightStep.Propagation where
+module LightStep.Propagation
+  ( module P
+  , module LightStep.Propagation
+  ) where
 
 import Control.Lens
 import Data.Bits
@@ -8,15 +11,15 @@ import qualified Data.ByteString as BS
 import Data.List (foldl')
 import Data.ProtoLens.Message (defMessage)
 import GHC.Word
-import Network.HTTP.Types
 import Network.Wai
-import Proto.Collector
-import Proto.Collector_Fields
+import Proto.Collector as P
+import Proto.Collector_Fields as P
+import Data.String
 
 extractSpanContextFromRequest :: Request -> Maybe SpanContext
 extractSpanContextFromRequest = extractSpanContextFromRequestHeaders . requestHeaders
 
-extractSpanContextFromRequestHeaders :: RequestHeaders -> Maybe SpanContext
+extractSpanContextFromRequestHeaders :: (IsString key, Eq key) => [(key, BS.ByteString)] -> Maybe SpanContext
 extractSpanContextFromRequestHeaders hdrs =
   case foldl' go (Nothing, Nothing) hdrs of
     (Just tid, Just sid) ->
@@ -65,7 +68,7 @@ encode_u64 x =
    in BS.pack hexDigits
 
 decode_u64 :: BS.ByteString -> Maybe Word64
-decode_u64 bytes | BS.length bytes /= 16 = Nothing
+decode_u64 bytes | BS.length bytes > 16 = Nothing
 decode_u64 bytes = BS.foldl' go (Just 0) bytes
   where
     go Nothing _ = Nothing
