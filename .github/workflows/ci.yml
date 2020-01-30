@@ -29,6 +29,8 @@ jobs:
         cabal v2-build -f examples
     - name: Test
       run: |
+        cabal install tasty-discover
+        env PATH="$HOME/.cabal/bin:$PATH" cabal test
         cabal v2-test
 
 
@@ -36,7 +38,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        stack-yaml: ['stack.yaml', 'stack-8.8.1.yaml']
+        stack-yaml: ['stack.yaml', 'stack-8.8.2.yaml']
     steps:
     - uses: actions/checkout@v1
     - name: Install protobuf compiler
@@ -58,7 +60,7 @@ jobs:
     runs-on: macOS-latest
     strategy:
       matrix:
-        stack-yaml: ['stack.yaml', 'stack-8.8.1.yaml']
+        stack-yaml: ['stack.yaml', 'stack-8.8.2.yaml']
     steps:
     - uses: actions/checkout@v1
     - name: Install protobuf compiler
