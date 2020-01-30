@@ -18,9 +18,10 @@ tracingMiddleware app = \req sendResp -> do
   withSpan "WAI handler" $ do
     case extractSpanContextFromRequest req of
       Just ctx -> do
-        d_ $ "extracted context: " <> show ctx
+        d_ $ "Extracted context: " <> show ctx
         setParentSpanContext ctx
-      _ -> pure ()
+      _ -> do
+        d_ $ "Failed to extract context from headers " <> show (requestHeaders req)
     setTag "span.kind" "server"
     setTag "component" "http"
     setTag "http.method" $ T.decodeUtf8 (requestMethod req)
