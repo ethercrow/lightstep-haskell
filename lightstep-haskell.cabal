@@ -148,9 +148,11 @@ executable lightstep-haskell-req-example
   build-depends:
       base >=4.9 && <5
     , lightstep-haskell
+    , case-insensitive
     , http-types
     , text
     , req >= 3.0.0
+    , unordered-containers
 
 executable lightstep-haskell-stress-test
   import: options

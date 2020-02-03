@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Concurrent
+import Data.CaseInsensitive (original)
+import Data.HashMap.Strict (toList)
 import LightStep.HighLevel.IO
-import LightStep.Propagation (b3headersForSpanContext)
+import LightStep.Propagation (b3Propagator, hmFromHttpHeaders, inject)
 import Network.HTTP.Req
 
 clientMain :: IO ()
@@ -11,7 +13,7 @@ clientMain = do
     setTag "span.kind" "client"
     setTag "component" "http"
     Just ctx <- currentSpanContext
-    let opts = port 8736 <> foldMap (\(k, v) -> header k v) (b3headersForSpanContext ctx)
+    let opts = port 8736 <> foldMap (\(k, v) -> header (original k) v) (toList (hmFromHttpHeaders (inject b3Propagator ctx Nothing)))
         url = http "127.0.0.1" /: "test"
     _ <- runReq defaultHttpConfig $ req GET url NoReqBody ignoreResponse opts
     pure ()
