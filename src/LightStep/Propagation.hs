@@ -6,55 +6,88 @@ module LightStep.Propagation
   ) where
 
 import Control.Lens
+import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
-import Data.List (foldl')
+import Data.Hashable (Hashable)
 import Data.ProtoLens.Message (defMessage)
 import GHC.Word
+import Network.HTTP.Types.Header (HeaderName)
 import Network.Wai
 import Proto.Collector as P
 import Proto.Collector_Fields as P
 import Data.String
 import Text.Printf
 
+newtype TextMap = TextMap { hmFromTextMap :: HM.HashMap BS.ByteString BS.ByteString }
+
+newtype HttpHeaders = HttpHeaders { hmFromHttpHeaders :: HM.HashMap HeaderName BS.ByteString }
+
+-- TODO: Binary format. Both go and python basictracers use TracerState
+-- protobuf https://github.com/opentracing/basictracer-go/blob/master/wire/wire.proto
+
+data Propagator a = Propagator
+  { inject :: SpanContext -> Maybe a -> a,
+    extract :: a -> Maybe SpanContext
+  }
+
+textPropagator :: Propagator TextMap
+textPropagator =
+  let prefix = "ot-tracer-" in
+    Propagator {
+      inject = \ctx maybeTextMap ->
+        TextMap $ injectSpanContext prefix ctx (hmFromTextMap <$> maybeTextMap),
+      extract = \(TextMap hm) ->
+        extractSpanContext prefix hm
+      }
+
+httpHeadersPropagator :: Propagator HttpHeaders
+httpHeadersPropagator =
+  let prefix = "ot-tracer-" in
+    Propagator {
+      inject = \ctx maybeHeaders ->
+        HttpHeaders $ injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders),
+      extract = \(HttpHeaders hm) ->
+        extractSpanContext prefix hm
+      }
+
+b3Propagator :: Propagator HttpHeaders
+b3Propagator =
+  let prefix = "x-b3-" in
+    Propagator {
+      inject = \ctx maybeHeaders ->
+        let
+          hm = injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders)
+          hm' = HM.insert (prefix <> "sampled") "true" hm
+        in HttpHeaders hm',
+      extract = \(HttpHeaders hm) ->
+        extractSpanContext prefix hm
+      }
+
+injectSpanContext ::
+  (IsString key, Eq key, Hashable key, Semigroup key) =>
+  key -> SpanContext -> Maybe (HM.HashMap key BS.ByteString) -> HM.HashMap key BS.ByteString
+injectSpanContext prefix ctx (Just hm) =
+  let
+    hm' = HM.insert (prefix <> "traceid") (encode_u64 $ ctx ^. traceId) hm
+    hm'' = HM.insert (prefix <> "spanid") (encode_u64 $ ctx ^. spanId) hm'
+  in hm''
+injectSpanContext prefix ctx Nothing = injectSpanContext prefix ctx (Just HM.empty)
+
+extractSpanContext ::
+  (IsString key, Eq key, Hashable key, Semigroup key) =>
+  key -> HM.HashMap key BS.ByteString -> Maybe SpanContext
+extractSpanContext prefix hm = do
+  tid <- HM.lookup (prefix <> "traceid") hm >>= decode_u64
+  sid <- HM.lookup (prefix <> "spanid") hm >>= decode_u64
+  return (defMessage & traceId .~ tid & spanId .~ sid)
+
 extractSpanContextFromRequest :: Request -> Maybe SpanContext
-extractSpanContextFromRequest = extractSpanContextFromRequestHeaders . requestHeaders
-
-extractSpanContextFromRequestHeaders :: (IsString key, Eq key) => [(key, BS.ByteString)] -> Maybe SpanContext
-extractSpanContextFromRequestHeaders hdrs =
-  case foldl' go (Nothing, Nothing) hdrs of
-    (Just tid, Just sid) ->
-      defMessage
-        & traceId .~ tid
-        & spanId .~ sid
-        & Just
-    _ -> Nothing
-  where
-    -- TODO: 128-bit x-b3-traceid
-    go (_, sid) ("x-b3-traceid", decode_u64 -> Just tid) = (Just tid, sid)
-    go (tid, _) ("x-b3-spanid", decode_u64 -> Just sid) = (tid, Just sid)
-    go (_, sid) ("ot-tracer-traceid", decode_u64 -> Just tid) = (Just tid, sid)
-    go (tid, _) ("ot-tracer-spanid", decode_u64 -> Just sid) = (tid, Just sid)
-    -- TODO: Propagation of the whole span context in a single header
-    -- go _ ("x-ot-span-context", parse128 -> Just (tid, sid)) = (Just tid, Just sid)
-
-    go acc _ = acc
+extractSpanContextFromRequest =
+  extract httpHeadersPropagator . HttpHeaders . HM.fromList . requestHeaders
 
 -- parse128 :: BS.ByteString -> Maybe (Word64, Word64)
 -- parse128 _ = Nothing -- TODO
-
-headersForSpanContext :: SpanContext -> [(BS.ByteString, BS.ByteString)]
-headersForSpanContext ctx =
-  [ ("ot-tracer-traceid", encode_u64 $ ctx ^. traceId),
-    ("ot-tracer-spanid", encode_u64 $ ctx ^. spanId)
-  ]
-
-b3headersForSpanContext :: SpanContext -> [(BS.ByteString, BS.ByteString)]
-b3headersForSpanContext ctx =
-  [ ("x-b3-traceid", encode_u64 $ ctx ^. traceId),
-    ("x-b3-spanid", encode_u64 $ ctx ^. spanId),
-    ("x-b3-sampled", "true")
-  ]
 
 encode_u64 :: Word64 -> BS.ByteString
 encode_u64 x = BS8.pack (printf "%016x" x)
