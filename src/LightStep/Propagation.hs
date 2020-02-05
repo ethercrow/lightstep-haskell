@@ -33,7 +33,7 @@ data Propagator a = Propagator
 
 textPropagator :: Propagator TextMap
 textPropagator =
-  let prefix = "ot-tracer-" in
+  let prefix = "Ot-Tracer-" in
     Propagator {
       inject = \ctx maybeTextMap ->
         TextMap $ injectSpanContext prefix ctx (hmFromTextMap <$> maybeTextMap),
@@ -43,7 +43,7 @@ textPropagator =
 
 httpHeadersPropagator :: Propagator HttpHeaders
 httpHeadersPropagator =
-  let prefix = "ot-tracer-" in
+  let prefix = "Ot-Tracer-" in
     Propagator {
       inject = \ctx maybeHeaders ->
         HttpHeaders $ injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders),
@@ -53,13 +53,10 @@ httpHeadersPropagator =
 
 b3Propagator :: Propagator HttpHeaders
 b3Propagator =
-  let prefix = "x-b3-" in
+  let prefix = "X-B3-" in
     Propagator {
       inject = \ctx maybeHeaders ->
-        let
-          hm = injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders)
-          hm' = HM.insert (prefix <> "sampled") "true" hm
-        in HttpHeaders hm',
+        HttpHeaders $ injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders),
       extract = \(HttpHeaders hm) ->
         extractSpanContext prefix hm
       }
@@ -68,18 +65,18 @@ injectSpanContext ::
   (IsString key, Eq key, Hashable key, Semigroup key) =>
   key -> SpanContext -> Maybe (HM.HashMap key BS.ByteString) -> HM.HashMap key BS.ByteString
 injectSpanContext prefix ctx (Just hm) =
-  let
-    hm' = HM.insert (prefix <> "traceid") (encode_u64 $ ctx ^. traceId) hm
-    hm'' = HM.insert (prefix <> "spanid") (encode_u64 $ ctx ^. spanId) hm'
-  in hm''
+  hm <> HM.fromList [ (prefix <> "Traceid", encode_u64 $ ctx ^. traceId)
+                    , (prefix <> "Spanid", encode_u64 $ ctx ^. spanId)
+                    , (prefix <> "Sampled", "true")
+                    ]
 injectSpanContext prefix ctx Nothing = injectSpanContext prefix ctx (Just HM.empty)
 
 extractSpanContext ::
   (IsString key, Eq key, Hashable key, Semigroup key) =>
   key -> HM.HashMap key BS.ByteString -> Maybe SpanContext
 extractSpanContext prefix hm = do
-  tid <- HM.lookup (prefix <> "traceid") hm >>= decode_u64
-  sid <- HM.lookup (prefix <> "spanid") hm >>= decode_u64
+  tid <- HM.lookup (prefix <> "Traceid") hm >>= decode_u64
+  sid <- HM.lookup (prefix <> "Spanid") hm >>= decode_u64
   return (defMessage & traceId .~ tid & spanId .~ sid)
 
 extractSpanContextFromRequest :: Request -> Maybe SpanContext
