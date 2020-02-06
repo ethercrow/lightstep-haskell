@@ -6,10 +6,8 @@ module LightStep.Propagation
   ) where
 
 import Control.Lens
-import qualified Data.HashMap.Strict as HM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
-import Data.Hashable (Hashable)
 import Data.ProtoLens.Message (defMessage)
 import GHC.Word
 import Network.HTTP.Types.Header (HeaderName)
@@ -19,9 +17,9 @@ import Proto.Collector_Fields as P
 import Data.String
 import Text.Printf
 
-newtype TextMap = TextMap { hmFromTextMap :: HM.HashMap BS.ByteString BS.ByteString }
+type TextMap = [(BS.ByteString, BS.ByteString)]
 
-newtype HttpHeaders = HttpHeaders { hmFromHttpHeaders :: HM.HashMap HeaderName BS.ByteString }
+type HttpHeaders = [(HeaderName, BS.ByteString)]
 
 -- TODO: Binary format. Both go and python basictracers use TracerState
 -- protobuf https://github.com/opentracing/basictracer-go/blob/master/wire/wire.proto
@@ -35,53 +33,54 @@ textPropagator :: Propagator TextMap
 textPropagator =
   let prefix = "Ot-Tracer-" in
     Propagator {
-      inject = \ctx maybeTextMap ->
-        TextMap $ injectSpanContext prefix ctx (hmFromTextMap <$> maybeTextMap),
-      extract = \(TextMap hm) ->
-        extractSpanContext prefix hm
+      inject = injectSpanContext prefix,
+      extract = extractSpanContext prefix
       }
 
 httpHeadersPropagator :: Propagator HttpHeaders
 httpHeadersPropagator =
   let prefix = "Ot-Tracer-" in
     Propagator {
-      inject = \ctx maybeHeaders ->
-        HttpHeaders $ injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders),
-      extract = \(HttpHeaders hm) ->
-        extractSpanContext prefix hm
+      inject = injectSpanContext prefix,
+      extract = extractSpanContext prefix
       }
 
 b3Propagator :: Propagator HttpHeaders
 b3Propagator =
   let prefix = "X-B3-" in
     Propagator {
-      inject = \ctx maybeHeaders ->
-        HttpHeaders $ injectSpanContext prefix ctx (hmFromHttpHeaders <$> maybeHeaders),
-      extract = \(HttpHeaders hm) ->
-        extractSpanContext prefix hm
+      inject = injectSpanContext prefix,
+      extract = extractSpanContext prefix
       }
 
 injectSpanContext ::
-  (IsString key, Eq key, Hashable key, Semigroup key) =>
-  key -> SpanContext -> Maybe (HM.HashMap key BS.ByteString) -> HM.HashMap key BS.ByteString
+  (IsString key, Semigroup key) =>
+  key -> SpanContext -> Maybe [(key, BS.ByteString)] -> [(key, BS.ByteString)]
 injectSpanContext prefix ctx (Just hm) =
-  hm <> HM.fromList [ (prefix <> "Traceid", encode_u64 $ ctx ^. traceId)
-                    , (prefix <> "Spanid", encode_u64 $ ctx ^. spanId)
-                    , (prefix <> "Sampled", "true")
-                    ]
-injectSpanContext prefix ctx Nothing = injectSpanContext prefix ctx (Just HM.empty)
+  [ (prefix <> "Traceid", encode_u64 $ ctx ^. traceId)
+  , (prefix <> "Spanid", encode_u64 $ ctx ^. spanId)
+  , (prefix <> "Sampled", "true")
+  ] <> hm
+injectSpanContext prefix ctx Nothing = injectSpanContext prefix ctx (Just [])
 
 extractSpanContext ::
-  (IsString key, Eq key, Hashable key, Semigroup key) =>
-  key -> HM.HashMap key BS.ByteString -> Maybe SpanContext
-extractSpanContext prefix hm = do
-  tid <- HM.lookup (prefix <> "Traceid") hm >>= decode_u64
-  sid <- HM.lookup (prefix <> "Spanid") hm >>= decode_u64
-  return (defMessage & traceId .~ tid & spanId .~ sid)
+  (IsString key, Eq key, Semigroup key) =>
+  key -> [(key, BS.ByteString)] -> Maybe SpanContext
+extractSpanContext prefix format =
+  (\(tid, sid) -> defMessage & traceId .~ tid & spanId .~ sid)
+    <$> go format (Nothing, Nothing)
+  where
+    traceidKey = prefix <> "Traceid"
+    spanidKey = prefix <> "Spanid"
+    go _ (Just tid, Just sid) = Just (tid, sid)
+    go [] _ = Nothing
+    go ((k, v):xs) (tid, sid) | k == traceidKey = go xs (decode_u64 v, sid)
+                              | k == spanidKey = go xs (tid, decode_u64 v)
+                              | otherwise = go xs (tid, sid)
 
 extractSpanContextFromRequest :: Request -> Maybe SpanContext
 extractSpanContextFromRequest =
-  extract httpHeadersPropagator . HttpHeaders . HM.fromList . requestHeaders
+  extract httpHeadersPropagator . requestHeaders
 
 -- parse128 :: BS.ByteString -> Maybe (Word64, Word64)
 -- parse128 _ = Nothing -- TODO
