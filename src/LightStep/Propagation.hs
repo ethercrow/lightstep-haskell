@@ -25,7 +25,7 @@ type HttpHeaders = [(HeaderName, BS.ByteString)]
 -- protobuf https://github.com/opentracing/basictracer-go/blob/master/wire/wire.proto
 
 data Propagator a = Propagator
-  { inject :: SpanContext -> Maybe a -> a,
+  { inject :: SpanContext -> a,
     extract :: a -> Maybe SpanContext
   }
 
@@ -55,13 +55,12 @@ b3Propagator =
 
 injectSpanContext ::
   (IsString key, Semigroup key) =>
-  key -> SpanContext -> Maybe [(key, BS.ByteString)] -> [(key, BS.ByteString)]
-injectSpanContext prefix ctx (Just hm) =
+  key -> SpanContext -> [(key, BS.ByteString)]
+injectSpanContext prefix ctx =
   [ (prefix <> "Traceid", encode_u64 $ ctx ^. traceId)
   , (prefix <> "Spanid", encode_u64 $ ctx ^. spanId)
   , (prefix <> "Sampled", "true")
-  ] <> hm
-injectSpanContext prefix ctx Nothing = injectSpanContext prefix ctx (Just [])
+  ]
 
 extractSpanContext ::
   (IsString key, Eq key, Semigroup key) =>

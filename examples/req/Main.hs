@@ -12,7 +12,7 @@ clientMain = do
     setTag "span.kind" "client"
     setTag "component" "http"
     Just ctx <- currentSpanContext
-    let opts = port 8736 <> foldMap (\(k, v) -> header (original k) v) (inject b3Propagator ctx Nothing)
+    let opts = port 8736 <> foldMap (\(k, v) -> header (original k) v) (inject b3Propagator ctx)
         url = http "127.0.0.1" /: "test"
     _ <- runReq defaultHttpConfig $ req GET url NoReqBody ignoreResponse opts
     pure ()

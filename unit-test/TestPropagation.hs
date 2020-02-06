@@ -21,7 +21,7 @@ prop_text_propagator_roundtrip tid sid =
           & traceId .~ tid
           & spanId .~ sid
       p = textPropagator
-   in Just c == extract p (inject p c Nothing)
+   in Just c == extract p (inject p c)
 
 prop_b3_propagator_roundtrip :: Word64 -> Word64 -> Bool
 prop_b3_propagator_roundtrip tid sid =
@@ -30,4 +30,4 @@ prop_b3_propagator_roundtrip tid sid =
           & traceId .~ tid
           & spanId .~ sid
       p = b3Propagator
-   in Just c == extract p (inject p c Nothing)
+   in Just c == extract p (inject p c)
