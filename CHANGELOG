@@ -1,3 +1,6 @@
+0.6.0
+  * Fixed context propagation, changed API a bit, please consult example-req for usage.
+
 0.5.2:
   * Make `modifyCurrentSpan` and `currentSpanContext` functions safe to call not within a span
 

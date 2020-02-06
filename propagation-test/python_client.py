@@ -37,7 +37,7 @@ if __name__ == "__main__":
   with opentracing.tracer.start_active_span('TestSpan') as scope:
     scope.span.log_event('test message', payload={'life': 42})
 
-    url = 'http://localhost:8736/foo'
+    url = 'http://localhost:8080/predictions'
     request = urllib.request.Request(url)
     client_span = before_sending_request(request)
     with opentracing.tracer.scope_manager.activate(client_span, True):

@@ -3,3 +3,4 @@
 /bash_completion.sh
 cabal.project.*
 dist-newstyle
+go.sum

@@ -19,26 +19,26 @@ import Data.Maybe
 import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
 import GHC.Conc
-import LightStep.Internal.Debug
+import LightStep.Config
 import LightStep.Diagnostics
+import LightStep.Internal.Debug
 import LightStep.LowLevel
 import Proto.Collector
 import Proto.Collector_Fields
 import System.IO.Unsafe
 import System.Timeout
-import LightStep.Config
 
 {-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
 globalSharedMutableSpanStacks = unsafePerformIO (newMVar mempty)
 
-data LogEntryKey =  ErrorKind | Event | Message | Stack | Custom T.Text
+data LogEntryKey = ErrorKind | Event | Message | Stack | Custom T.Text
 
 showLogEntryKey :: LogEntryKey -> T.Text
-showLogEntryKey ErrorKind  = T.pack "error.kind"
-showLogEntryKey Event      = T.pack "event"
-showLogEntryKey Message    = T.pack "message"
-showLogEntryKey Stack      = T.pack "stack"
+showLogEntryKey ErrorKind = T.pack "error.kind"
+showLogEntryKey Event = T.pack "event"
+showLogEntryKey Message = T.pack "message"
+showLogEntryKey Stack = T.pack "stack"
 showLogEntryKey (Custom x) = x
 
 withSpan :: forall m a. MonadIO m => MonadMask m => T.Text -> m a -> m a
@@ -47,10 +47,10 @@ withSpan opName action =
       onExc ex = do
         setTag "error" "true"
         setTag "error.message" (T.pack $ displayException ex)
-  in bracket
-    (pushSpan opName)
-    popSpan
-    (const (withException action onExc))
+   in bracket
+        (pushSpan opName)
+        popSpan
+        (const (withException action onExc))
 
 pushSpan :: MonadIO m => T.Text -> m ()
 pushSpan opName = liftIO $ do
@@ -59,8 +59,9 @@ pushSpan opName = liftIO $ do
   modifyMVar_ globalSharedMutableSpanStacks $ \stacks ->
     case fromMaybe [] (HM.lookup tId stacks) of
       [] -> do
-        let !sp' = sp
-              & tags %~ (<> [defMessage & key .~ "thread" & stringValue .~ T.pack (show tId)])
+        let !sp' =
+              sp
+                & tags %~ (<> [defMessage & key .~ "thread" & stringValue .~ T.pack (show tId)])
         pure $! HM.insert tId [sp'] stacks
       (psp : _) ->
         let !sp' =
@@ -104,7 +105,6 @@ currentSpanContext = liftIO $ do
           Just (sp : _) -> Just $ sp ^. spanContext
           _ -> Nothing
   pure ctx
-    
 
 setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
@@ -115,9 +115,10 @@ addLog k v =
   modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
 setParentSpanContext :: MonadIO m => SpanContext -> m ()
-setParentSpanContext ctx = modifyCurrentSpan $ \sp -> sp
-  & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ ctx]
-  & spanContext . traceId .~ (ctx ^. traceId)
+setParentSpanContext ctx = modifyCurrentSpan $ \sp ->
+  sp
+    & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ ctx]
+    & spanContext . traceId .~ (ctx ^. traceId)
 
 {-# NOINLINE globalSharedMutableSingletonState #-}
 globalSharedMutableSingletonState :: TBQueue Span
