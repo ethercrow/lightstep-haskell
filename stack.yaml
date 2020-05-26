@@ -1,7 +1,9 @@
-resolver: lts-14.12
+resolver: lts-15.13
 
 packages:
 - .
+
+allow-newer: true
 
 extra-deps:
 - http2-client-0.9.0.0

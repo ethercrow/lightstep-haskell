@@ -4,6 +4,7 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Monad
 import GHC.Stats
+import LightStep.Diagnostics
 import LightStep.HighLevel.IO (LogEntryKey (..), addLog, getEnvConfig, setTag, withSingletonLightStep, withSpan)
 import System.Exit
 import Text.Printf
@@ -67,4 +68,5 @@ main = do
       replicateM_ 1000 $ do
         _ <- async seriousBusinessMain
         threadDelay 10000
+  getDiagnostics >>= print
   putStrLn "All done"

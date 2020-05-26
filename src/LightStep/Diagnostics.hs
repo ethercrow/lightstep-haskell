@@ -32,6 +32,10 @@ rejectedSpanCountVar :: TVar Int
 rejectedSpanCountVar = unsafePerformIO $ newTVarIO 0
 {-# NOINLINE rejectedSpanCountVar #-}
 
+sentBatchesCountVar :: TVar Int
+sentBatchesCountVar = unsafePerformIO $ newTVarIO 0
+{-# NOINLINE sentBatchesCountVar #-}
+
 data Diagnostics
   = Diagnostics
       { diagReconnectCount :: !Int,
@@ -39,8 +43,10 @@ data Diagnostics
         diagFinishedSpanCount :: !Int,
         diagDroppedSpanCount :: !Int,
         diagReportedSpanCount :: !Int,
-        diagRejectedSpanCount :: !Int
+        diagRejectedSpanCount :: !Int,
+        diagSentBatchesCount :: !Int
       }
+  deriving (Show)
 
 getDiagnostics :: IO Diagnostics
 getDiagnostics =
@@ -52,3 +58,4 @@ getDiagnostics =
       <*> readTVar droppedSpanCountVar
       <*> readTVar reportedSpanCountVar
       <*> readTVar rejectedSpanCountVar
+      <*> readTVar sentBatchesCountVar

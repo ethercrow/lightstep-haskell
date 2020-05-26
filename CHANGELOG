@@ -1,3 +1,7 @@
+0.7.0
+  * New diagnostic counter: number of sent batches
+  * Configurable minimum size of a batch to send to the collector, default is 1 span
+
 0.6.1
   * Removed a forgotten debug print statement
 

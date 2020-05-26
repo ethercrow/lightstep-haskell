@@ -122,7 +122,7 @@ setParentSpanContext ctx = modifyCurrentSpan $ \sp ->
 
 {-# NOINLINE globalSharedMutableSingletonState #-}
 globalSharedMutableSingletonState :: TBQueue Span
-globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 100
+globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 1000
 
 withSingletonLightStep :: LightStepConfig -> IO () -> IO ()
 withSingletonLightStep cfg action = do
@@ -132,10 +132,11 @@ withSingletonLightStep cfg action = do
   let work = do
         d_ "Getting more spans"
         sps <- atomically $ do
-          x <- readTBQueue globalSharedMutableSingletonState
-          xs <- flushTBQueue globalSharedMutableSingletonState
-          pure (x : xs)
+          some_spans <- replicateM (lsMinimumBatchSize cfg) $ readTBQueue globalSharedMutableSingletonState
+          some_more_spans <- flushTBQueue globalSharedMutableSingletonState
+          pure (some_spans <> some_more_spans)
         d_ $ "Got " <> show (length sps) <> " spans"
+        inc 1 sentBatchesCountVar
         reportSpansRes <- tryAny (reportSpans client sps)
         case reportSpansRes of
           Right () ->

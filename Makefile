@@ -63,4 +63,4 @@ deps-tree.txt: lightstep-haskell.cabal stack.yaml
 
 .PHONY: stress
 stress: stack-build
-	env GHCRTS="-T" stack exec lightstep-haskell-stress-test
+	env GHCRTS="-T -s" stack exec lightstep-haskell-stress-test
