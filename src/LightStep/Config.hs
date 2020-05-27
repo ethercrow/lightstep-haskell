@@ -10,6 +10,8 @@ import Network.HTTP2.Client
 import System.Environment
 import System.IO
 
+data Compression = NoCompression | GzipCompression
+
 data LightStepConfig
   = LightStepConfig
       { lsHostName :: HostName,
@@ -18,7 +20,8 @@ data LightStepConfig
         lsServiceName :: T.Text,
         lsGlobalTags :: [(T.Text, T.Text)],
         lsGracefulShutdownTimeoutSeconds :: Int,
-        lsMinimumBatchSize :: Int
+        lsMinimumBatchSize :: Int,
+        lsCompression :: Compression
       }
 
 lookupOneOfEnvs :: [String] -> IO (Maybe String)
@@ -40,7 +43,7 @@ getEnvConfig = liftIO $ do
       host <- fromMaybe "ingest.lightstep.com" <$> lookupOneOfEnvs ["LIGHTSTEP_HOST", "OPENTRACING_LIGHTSTEP_COLLECTOR_HOST"]
       port <- maybe 443 read <$> lookupOneOfEnvs ["LIGHTSTEP_PORT", "OPENTRACING_LIGHTSTEP_COLLECTOR_PORT"]
       service <- fromMaybe "example-haskell-service" <$> lookupOneOfEnvs ["LIGHTSTEP_SERVICE", "OPENTRACING_LIGHTSTEP_COMPONENT_NAME"]
-      pure $ Just $ LightStepConfig host port (T.pack t) (T.pack service) global_tags 5 1
+      pure $ Just $ LightStepConfig host port (T.pack t) (T.pack service) global_tags 5 1 GzipCompression
     Nothing -> do
       hPutStrLn stderr "LIGHTSTEP_ACCESS_TOKEN environment variable not defined"
       pure Nothing

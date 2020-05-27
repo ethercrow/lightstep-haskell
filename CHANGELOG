@@ -1,3 +1,6 @@
+0.8.0
+  * Configurable compression
+
 0.7.0
   * New diagnostic counter: number of sent batches
   * Configurable minimum size of a batch to send to the collector, default is 1 span

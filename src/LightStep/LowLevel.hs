@@ -90,6 +90,9 @@ mkClient cfg@LightStepConfig {..} = do
 makeGrpcClient :: LightStepClient -> IO GrpcClient
 makeGrpcClient client = do
   let LightStepConfig {..} = lscConfig client
+      compression = case lsCompression of
+        NoCompression -> uncompressed
+        GzipCompression -> gzip
   newGrpcOrError <-
     runExceptT $
       setupGrpcClient
@@ -102,8 +105,6 @@ makeGrpcClient client = do
   case newGrpcOrError of
     Right newGrpc -> pure newGrpc
     Left err -> throwIO err
-  where
-    compression = if False then gzip else uncompressed
 
 reconnectClient :: LightStepClient -> IO ()
 reconnectClient client@LightStepClient {lscGrpcVar} = do
