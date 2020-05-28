@@ -11,7 +11,7 @@ where
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM
-import Control.Exception.Safe
+import Control.Monad.Catch
 import Control.Lens
 import Control.Monad.Except
 import qualified Data.HashMap.Strict as HM
@@ -42,18 +42,28 @@ showLogEntryKey Stack = T.pack "stack"
 showLogEntryKey (Custom x) = x
 
 withSpan :: forall m a. MonadIO m => MonadMask m => T.Text -> m a -> m a
-withSpan opName action =
-  let onExc :: SomeException -> m ()
-      onExc ex = do
-        setTag "error" "true"
-        setTag "error.message" (T.pack $ displayException ex)
-   in bracket
-        (pushSpan opName)
-        popSpan
-        (const (withException action onExc))
+withSpan opName action = withSpanAndSomeInitialTags opName [] action
 
-pushSpan :: MonadIO m => T.Text -> m ()
-pushSpan opName = liftIO $ do
+withSpanAndSomeInitialTags :: forall m a. MonadIO m => MonadMask m => T.Text -> [(T.Text, T.Text)] -> m a -> m a
+withSpanAndSomeInitialTags opName initialTags action =
+   fst <$> generalBracket
+        (pushSpan opName initialTags)
+        (\sp exitcase -> do
+          case exitcase of
+            ExitCaseSuccess _ -> pure ()
+            ExitCaseException ex -> do
+              setTags [
+                ("error", "true"),
+                ("error.message", (T.pack $ displayException ex))]
+            ExitCaseAbort -> do
+              setTags [
+                ("error", "true"),
+                ("error.message", "abort")]
+          popSpan sp)
+        (\_ -> action)
+
+pushSpan :: MonadIO m => T.Text -> [(T.Text, T.Text)] -> m ()
+pushSpan opName initialTags = liftIO $ do
   sp <- startSpan opName
   tId <- myThreadId
   modifyMVar_ globalSharedMutableSpanStacks $ \stacks ->
@@ -61,7 +71,10 @@ pushSpan opName = liftIO $ do
       [] -> do
         let !sp' =
               sp
-                & tags %~ (<> [defMessage & key .~ "thread" & stringValue .~ T.pack (show tId)])
+                & tags .~
+                  ( (defMessage & key .~ "thread" & stringValue .~ T.pack (show tId))
+                  : [(defMessage & key .~ k & stringValue .~ v) | (k, v) <- initialTags]
+                  )
         pure $! HM.insert tId [sp'] stacks
       (psp : _) ->
         let !sp' =
@@ -108,7 +121,11 @@ currentSpanContext = liftIO $ do
 
 setTag :: MonadIO m => T.Text -> T.Text -> m ()
 setTag k v =
-  modifyCurrentSpan (tags %~ (<> [defMessage & key .~ k & stringValue .~ v]))
+  modifyCurrentSpan (tags %~ ((defMessage & key .~ k & stringValue .~ v) :))
+
+setTags :: MonadIO m => [(T.Text, T.Text)] -> m ()
+setTags kvs =
+  modifyCurrentSpan (tags %~ ([defMessage & key .~ k & stringValue .~ v | (k, v) <- kvs] <>))
 
 addLog :: LogEntryKey -> T.Text -> IO ()
 addLog k v =
@@ -137,11 +154,11 @@ withSingletonLightStep cfg action = do
           pure (some_spans <> some_more_spans)
         d_ $ "Got " <> show (length sps) <> " spans"
         inc 1 sentBatchesCountVar
-        reportSpansRes <- tryAny (reportSpans client sps)
+        reportSpansRes <- try (reportSpans client sps)
         case reportSpansRes of
           Right () ->
             d_ $ "Reported " <> show (length sps) <> " spans"
-          Left err ->
+          Left (err :: SomeException) ->
             d_ $ "Error while reporting spans: " <> show err
       shutdown = do
         d_ "Getting the last spans before shutdown"

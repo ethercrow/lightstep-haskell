@@ -8,7 +8,7 @@ where
 
 import Chronos
 import Control.Concurrent
-import Control.Exception.Safe
+import Control.Monad.Catch
 import Control.Lens hiding (op)
 import Data.ProtoLens.Message (defMessage)
 import qualified Data.Text as T
@@ -49,7 +49,7 @@ reportSpans client@LightStepClient {..} sps = do
                       & spans .~ sps
                       & reporter .~ lscReporter
                   )
-        req `withException` (\err -> d_ $ "reportSpans failed: " <> show (err :: SomeException))
+        req
   inc (length sps) reportedSpanCountVar
   ret <- tryOnce
   ret2 <- case ret of
@@ -104,7 +104,7 @@ makeGrpcClient client = do
         )
   case newGrpcOrError of
     Right newGrpc -> pure newGrpc
-    Left err -> throwIO err
+    Left err -> throwM err
 
 reconnectClient :: LightStepClient -> IO ()
 reconnectClient client@LightStepClient {lscGrpcVar} = do

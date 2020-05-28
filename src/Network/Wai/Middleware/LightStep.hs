@@ -2,7 +2,7 @@
 
 module Network.Wai.Middleware.LightStep where
 
-import qualified Data.Text as T
+import TextShow
 import qualified Data.Text.Encoding as T
 import LightStep.HighLevel.IO
 import LightStep.Internal.Debug
@@ -22,14 +22,13 @@ tracingMiddleware app = \req sendResp -> do
         setParentSpanContext ctx
       _ -> do
         d_ $ "Failed to extract context from headers " <> show (requestHeaders req)
-    setTag "span.kind" "server"
-    setTag "component" "http"
-    setTag "http.method" $ T.decodeUtf8 (requestMethod req)
-    setTag "http.target" $ T.decodeUtf8 (rawPathInfo req)
-    setTag "http.flavor" $ showT (httpVersion req)
+    setTags
+      [ ("span.kind", "server")
+      , ("http.method", T.decodeUtf8 (requestMethod req))
+      , ("http.target", T.decodeUtf8 (rawPathInfo req))
+      , ("http.flavor", showt (httpMajor $ httpVersion req))
+      ]
     app req $ \resp -> do
-      setTag "http.status_code" $ showT (statusCode $ responseStatus resp)
+      setTag "http.status_code" $ showt (statusCode $ responseStatus resp)
       sendResp resp
 
-showT :: Show a => a -> T.Text
-showT = T.pack . show

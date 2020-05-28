@@ -5,7 +5,7 @@ import Control.Concurrent.Async
 import Control.Monad
 import GHC.Stats
 import LightStep.Diagnostics
-import LightStep.HighLevel.IO (LogEntryKey (..), addLog, getEnvConfig, setTag, withSingletonLightStep, withSpan)
+import LightStep.HighLevel.IO
 import System.Exit
 import Text.Printf
 
@@ -13,21 +13,17 @@ seriousBusinessMain :: IO ()
 seriousBusinessMain = concurrently_ frontend backend
   where
     frontend =
-      withSpan "RESTful API" $ do
+      withSpanAndSomeInitialTags "RESTful API" [("foo", "bar")] $ do
         threadDelay 10000
-        setTag "foo" "bar"
-        withSpan "Kafka" $ do
+        withSpanAndSomeInitialTags "Kafka" [("foo", "baz")] $ do
           threadDelay 20000
-          setTag "foo" "baz"
         threadDelay 30000
-        withSpan "GraphQL" $ do
+        withSpanAndSomeInitialTags "GraphQL" [("foo", "quux"), ("lorem", "ipsum")] $ do
           threadDelay 40000
-          setTag "foo" "quux"
           addLog Event "monkey-job"
           addLog (Custom "foo") "bar"
           withSpan "Mongodb" $ do
             threadDelay 50000
-          setTag "lorem" "ipsum"
           threadDelay 60000
         withSpan "data->json" $ pure ()
         withSpan "json->yaml" $ pure ()
@@ -39,15 +35,13 @@ seriousBusinessMain = concurrently_ frontend backend
     backend =
       withSpan "Background Data Science" $ do
         threadDelay 10000
-        withSpan "Tensorflow" $ do
+        withSpanAndSomeInitialTags "Tensorflow" [("learning", "deep")] $ do
           threadDelay 100000
           setTag "learning" "deep"
-        withSpan "Torch" $ do
+        withSpanAndSomeInitialTags "Torch" [("learning", "very_deep")] $ do
           threadDelay 100000
-          setTag "learning" "very_deep"
-        withSpan "Hadoop" $ do
+        withSpanAndSomeInitialTags "Hadoop" [("learning", "super_deep")]$ do
           threadDelay 100000
-          setTag "learning" "super_deep"
 
 reportMemoryUsage :: IO ()
 reportMemoryUsage = do
