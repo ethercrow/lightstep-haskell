@@ -13,12 +13,12 @@ seriousBusinessMain :: IO ()
 seriousBusinessMain = concurrently_ frontend backend
   where
     frontend =
-      withSpanAndSomeInitialTags "RESTful API" [("foo", "bar")] $ do
+      withSpanAndTags "RESTful API" [("foo", "bar")] $ do
         threadDelay 10000
-        withSpanAndSomeInitialTags "Kafka" [("foo", "baz")] $ do
+        withSpanAndTags "Kafka" [("foo", "baz")] $ do
           threadDelay 20000
         threadDelay 30000
-        withSpanAndSomeInitialTags "GraphQL" [("foo", "quux"), ("lorem", "ipsum")] $ do
+        withSpanAndTags "GraphQL" [("foo", "quux"), ("lorem", "ipsum")] $ do
           threadDelay 40000
           addLog Event "monkey-job"
           addLog (Custom "foo") "bar"
@@ -35,12 +35,12 @@ seriousBusinessMain = concurrently_ frontend backend
     backend =
       withSpan "Background Data Science" $ do
         threadDelay 10000
-        withSpanAndSomeInitialTags "Tensorflow" [("learning", "deep")] $ do
+        withSpanAndTags "Tensorflow" [("learning", "deep")] $ do
           threadDelay 100000
           setTag "learning" "deep"
-        withSpanAndSomeInitialTags "Torch" [("learning", "very_deep")] $ do
+        withSpanAndTags "Torch" [("learning", "very_deep")] $ do
           threadDelay 100000
-        withSpanAndSomeInitialTags "Hadoop" [("learning", "super_deep")]$ do
+        withSpanAndTags "Hadoop" [("learning", "super_deep")]$ do
           threadDelay 100000
 
 reportMemoryUsage :: IO ()

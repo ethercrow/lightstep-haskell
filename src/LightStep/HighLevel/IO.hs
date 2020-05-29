@@ -42,10 +42,10 @@ showLogEntryKey Stack = T.pack "stack"
 showLogEntryKey (Custom x) = x
 
 withSpan :: forall m a. MonadIO m => MonadMask m => T.Text -> m a -> m a
-withSpan opName action = withSpanAndSomeInitialTags opName [] action
+withSpan opName action = withSpanAndTags opName [] action
 
-withSpanAndSomeInitialTags :: forall m a. MonadIO m => MonadMask m => T.Text -> [(T.Text, T.Text)] -> m a -> m a
-withSpanAndSomeInitialTags opName initialTags action =
+withSpanAndTags :: forall m a. MonadIO m => MonadMask m => T.Text -> [(T.Text, T.Text)] -> m a -> m a
+withSpanAndTags opName initialTags action =
    fst <$> generalBracket
         (pushSpan opName initialTags)
         (\sp exitcase -> do
