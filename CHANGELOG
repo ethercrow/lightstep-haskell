@@ -1,3 +1,6 @@
+0.10.1
+  * Fix withSpanAndTags losing tags when it was not a root span
+
 0.10.0
   * Rename withSpanAndSomeInitialTags to withSpanAndTags by popular demand
 

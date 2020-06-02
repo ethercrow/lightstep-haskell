@@ -81,6 +81,7 @@ pushSpan opName initialTags = liftIO $ do
               sp
                 & references .~ [defMessage & relationship .~ Reference'CHILD_OF & spanContext .~ (psp ^. spanContext)]
                 & spanContext . traceId .~ (psp ^. spanContext . traceId)
+                & tags .~ [(defMessage & key .~ k & stringValue .~ v) | (k, v) <- initialTags]
          in pure $! HM.update (Just . (sp' :)) tId stacks
 
 popSpan :: MonadIO m => () -> m ()
