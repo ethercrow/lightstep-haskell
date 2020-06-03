@@ -68,24 +68,24 @@ reportSpans client@LightStepClient {..} sps = do
 
 mkClient :: LightStepConfig -> IO LightStepClient
 mkClient cfg@LightStepConfig {..} = do
+  reporter_id <- randomIO
+  let rep =
+        defMessage
+          & reporterId .~ reporter_id
+          & tags
+            .~ ( [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
+                   defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
+                   defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
+                 ]
+                   <> [ defMessage & key .~ k & stringValue .~ v
+                        | (k, v) <- lsGlobalTags
+                      ]
+               )
   grpcVar <- newEmptyMVar
   let client = LightStepClient grpcVar lsToken rep cfg
   grpc <- makeGrpcClient client
   putMVar grpcVar grpc
   pure client
-  where
-    rep =
-      defMessage
-        & reporterId .~ 2
-        & tags
-          .~ ( [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
-                 defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
-                 defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
-               ]
-                 <> [ defMessage & key .~ k & stringValue .~ v
-                      | (k, v) <- lsGlobalTags
-                    ]
-             )
 
 makeGrpcClient :: LightStepClient -> IO GrpcClient
 makeGrpcClient client = do

@@ -1,3 +1,6 @@
+0.10.2
+  * Change reporter_id from 2 to a random number
+
 0.10.1
   * Fix withSpanAndTags losing tags when it was not a root span
 
