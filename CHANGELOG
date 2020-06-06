@@ -1,3 +1,6 @@
+0.10.3
+  * Track heap allocations per span
+
 0.10.2
   * Change reporter_id from 2 to a random number
 
