@@ -27,6 +27,7 @@ import Proto.Collector
 import Proto.Collector_Fields
 import System.IO.Unsafe
 import System.Timeout
+import TextShow
 
 {-# NOINLINE globalSharedMutableSpanStacks #-}
 globalSharedMutableSpanStacks :: MVar (HM.HashMap ThreadId [Span])
@@ -45,18 +46,23 @@ withSpan :: forall m a. MonadIO m => MonadMask m => T.Text -> m a -> m a
 withSpan opName action = withSpanAndTags opName [] action
 
 withSpanAndTags :: forall m a. MonadIO m => MonadMask m => T.Text -> [(T.Text, T.Text)] -> m a -> m a
-withSpanAndTags opName initialTags action =
+withSpanAndTags opName initialTags action = do
+   bytes_before <- liftIO getAllocationCounter
    fst <$> generalBracket
         (pushSpan opName initialTags)
         (\sp exitcase -> do
+          bytes_after <- liftIO getAllocationCounter
+          let alloc = showt $ bytes_before - bytes_after
           case exitcase of
-            ExitCaseSuccess _ -> pure ()
+            ExitCaseSuccess _ -> setTag "alloc" alloc
             ExitCaseException ex -> do
               setTags [
+                ("alloc", alloc),
                 ("error", "true"),
                 ("error.message", (T.pack $ displayException ex))]
             ExitCaseAbort -> do
               setTags [
+                ("alloc", alloc),
                 ("error", "true"),
                 ("error.message", "abort")]
           popSpan sp)
