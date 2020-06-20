@@ -65,7 +65,11 @@ deps-tree.txt: lightstep-haskell.cabal stack.yaml
 stress: stack-build
 	env GHCRTS="-T -s" stack exec lightstep-haskell-stress-test
 
+.PHONY: alligator-stress
+alligator-stress: stack-build
+	env GHCRTS="-T -s --nonmoving-gc" stack exec lightstep-haskell-stress-test
+
 .PHONY: profiled-stress
 profiled-stress:
 	stack install --profile
-	env GHCRTS="-T -s -p" lightstep-haskell-stress-test
+	env GHCRTS="-T -s -P" lightstep-haskell-stress-test

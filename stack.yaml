@@ -1,13 +1,14 @@
-resolver: lts-15.13
+resolver: nightly-2020-06-20
 
 packages:
 - .
 
-allow-newer: true
-
 extra-deps:
-- http2-client-0.9.0.0
-- http2-client-grpc-0.8.0.0
-- http2-grpc-proto-lens-0.1.0.0
-- http2-grpc-types-0.5.0.0
-- req-3.0.0
+- github: lucasdicioccio/http2-client
+  commit: 7201f65b31bf0a2b0bc4a904173233e1e728697b
+- github: haskell-grpc-native/http2-grpc-haskell
+  subdirs:
+  - http2-client-grpc
+  - http2-grpc-proto-lens
+  - http2-grpc-types
+  commit: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
