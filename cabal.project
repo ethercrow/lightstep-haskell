@@ -1,0 +1,24 @@
+packages: .
+
+source-repository-package
+  type: git
+  location: https://github.com/lucasdicioccio/http2-client
+  tag: 7201f65b31bf0a2b0bc4a904173233e1e728697b
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-grpc-native/http2-grpc-haskell
+  tag: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
+  subdir: http2-client-grpc
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-grpc-native/http2-grpc-haskell
+  tag: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
+  subdir: http2-grpc-proto-lens
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-grpc-native/http2-grpc-haskell
+  tag: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
+  subdir: http2-grpc-types
