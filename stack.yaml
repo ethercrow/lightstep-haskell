@@ -1,4 +1,4 @@
-resolver: nightly-2020-06-20
+resolver: nightly-2020-09-10
 
 packages:
 - .
@@ -12,3 +12,5 @@ extra-deps:
   - http2-grpc-proto-lens
   - http2-grpc-types
   commit: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
+
+allow-newer: true
