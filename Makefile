@@ -73,3 +73,8 @@ alligator-stress: stack-build
 profiled-stress:
 	stack install --profile
 	env GHCRTS="-T -s -P" lightstep-haskell-stress-test
+	stackcollapse-ghc lightstep-haskell-stress-test.prof | flamegraph.pl > p.svg
+	stackcollapse-ghc lightstep-haskell-stress-test.prof | flamegraph.pl --reverse > pr.svg
+	stackcollapse-ghc --alloc lightstep-haskell-stress-test.prof | flamegraph.pl > a.svg
+	stackcollapse-ghc --alloc lightstep-haskell-stress-test.prof | flamegraph.pl --reverse > ar.svg
+
