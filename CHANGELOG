@@ -1,3 +1,6 @@
+0.10.4
+  * Tolerate Lightstep being down
+
 0.10.3
   * Track heap allocations per span
 

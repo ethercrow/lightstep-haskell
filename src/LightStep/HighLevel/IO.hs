@@ -150,43 +150,50 @@ globalSharedMutableSingletonState = unsafePerformIO $ newTBQueueIO 1000
 
 withSingletonLightStep :: LightStepConfig -> IO () -> IO ()
 withSingletonLightStep cfg action = do
-  client <- mkClient cfg
-  d_ $ "Connected to LightStep " <> lsHostName cfg <> ":" <> show (lsPort cfg)
-  doneVar <- newEmptyMVar
-  let work = do
-        d_ "Getting more spans"
-        sps <- atomically $ do
-          some_spans <- replicateM (lsMinimumBatchSize cfg) $ readTBQueue globalSharedMutableSingletonState
-          some_more_spans <- flushTBQueue globalSharedMutableSingletonState
-          pure (some_spans <> some_more_spans)
-        d_ $ "Got " <> show (length sps) <> " spans"
-        inc 1 sentBatchesCountVar
-        reportSpansRes <- try (reportSpans client sps)
-        case reportSpansRes of
-          Right () ->
-            d_ $ "Reported " <> show (length sps) <> " spans"
-          Left (err :: SomeException) ->
-            d_ $ "Error while reporting spans: " <> show err
-      shutdown = do
-        d_ "Getting the last spans before shutdown"
-        sps <- atomically $ flushTBQueue globalSharedMutableSingletonState
-        when (not $ null sps) $ do
-          d_ $ "Got " <> show (length sps) <> " spans"
-          reportSpans client sps
-          d_ $ "Reported " <> show (length sps) <> " spans"
-        d_ "No more spans"
-        closeClient client
-        d_ "Client closed"
-        putMVar doneVar ()
-  race_ action $ do
-    tid <- myThreadId
-    labelThread tid "LightStep reporter"
-    fix $ \loop -> do
-      work
-      loop
-  race_
-    shutdown
-    (waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar)
+  clientOrError <- try (mkClient cfg)
+  case clientOrError of
+    Left (err :: IOError) -> do
+      d_ $ "Not connected to LightStep " <> lsHostName cfg <> ":" <> show (lsPort cfg)
+      d_ $ "Reason: " <> show err
+      d_ $ "Continuing without tracing"
+      action
+    Right client -> do
+      d_ $ "Connected to LightStep " <> lsHostName cfg <> ":" <> show (lsPort cfg)
+      doneVar <- newEmptyMVar
+      let work = do
+            d_ "Getting more spans"
+            sps <- atomically $ do
+              some_spans <- replicateM (lsMinimumBatchSize cfg) $ readTBQueue globalSharedMutableSingletonState
+              some_more_spans <- flushTBQueue globalSharedMutableSingletonState
+              pure (some_spans <> some_more_spans)
+            d_ $ "Got " <> show (length sps) <> " spans"
+            inc 1 sentBatchesCountVar
+            reportSpansRes <- try (reportSpans client sps)
+            case reportSpansRes of
+              Right () ->
+                d_ $ "Reported " <> show (length sps) <> " spans"
+              Left (err :: SomeException) ->
+                d_ $ "Error while reporting spans: " <> show err
+          shutdown = do
+            d_ "Getting the last spans before shutdown"
+            sps <- atomically $ flushTBQueue globalSharedMutableSingletonState
+            when (not $ null sps) $ do
+              d_ $ "Got " <> show (length sps) <> " spans"
+              reportSpans client sps
+              d_ $ "Reported " <> show (length sps) <> " spans"
+            d_ "No more spans"
+            closeClient client
+            d_ "Client closed"
+            putMVar doneVar ()
+      race_ action $ do
+        tid <- myThreadId
+        labelThread tid "LightStep reporter"
+        fix $ \loop -> do
+          work
+          loop
+      race_
+        shutdown
+        (waitUntilDone (lsGracefulShutdownTimeoutSeconds cfg) doneVar)
 
 submitSpan :: Span -> IO ()
 submitSpan sp = do
