@@ -74,7 +74,7 @@ mkClient cfg@LightStepConfig {..} = do
           & reporterId .~ reporter_id
           & tags
             .~ ( [ defMessage & key .~ "lightstep.component_name" & stringValue .~ lsServiceName,
-                   defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "haskell",
+                   defMessage & key .~ "lightstep.tracer_platform" & stringValue .~ "Haskell",
                    defMessage & key .~ "lightstep.tracer_version" & stringValue .~ (T.pack $ showVersion version)
                  ]
                    <> [ defMessage & key .~ k & stringValue .~ v
