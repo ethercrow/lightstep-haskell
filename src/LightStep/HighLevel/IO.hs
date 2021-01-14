@@ -134,7 +134,7 @@ setTags :: MonadIO m => [(T.Text, T.Text)] -> m ()
 setTags kvs =
   modifyCurrentSpan (tags %~ ([defMessage & key .~ k & stringValue .~ v | (k, v) <- kvs] <>))
 
-addLog :: LogEntryKey -> T.Text -> IO ()
+addLog :: MonadIO m => LogEntryKey -> T.Text -> m ()
 addLog k v =
   modifyCurrentSpan (logs %~ (<> [defMessage & fields .~ [defMessage & key .~ showLogEntryKey k & stringValue .~ v]]))
 
