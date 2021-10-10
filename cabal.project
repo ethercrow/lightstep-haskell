@@ -3,17 +3,17 @@ packages: .
 source-repository-package
   type: git
   location: https://github.com/haskell-grpc-native/http2-grpc-haskell
-  tag: fcc9e6f76df0ee37313b10697a3868552555cedd
+  tag: d7da6d63a16a1e9d16f20f5c50a29a1c42c3d354
   subdir: http2-client-grpc
 
 source-repository-package
   type: git
   location: https://github.com/haskell-grpc-native/http2-grpc-haskell
-  tag: fcc9e6f76df0ee37313b10697a3868552555cedd
+  tag: d7da6d63a16a1e9d16f20f5c50a29a1c42c3d354
   subdir: http2-grpc-proto-lens
 
 source-repository-package
   type: git
   location: https://github.com/haskell-grpc-native/http2-grpc-haskell
-  tag: fcc9e6f76df0ee37313b10697a3868552555cedd
+  tag: d7da6d63a16a1e9d16f20f5c50a29a1c42c3d354
   subdir: http2-grpc-types

@@ -1,18 +1,26 @@
-resolver: nightly-2020-10-07
+resolver: nightly-2021-10-07
 
 packages:
 - .
 
 extra-deps:
-- github: lucasdicioccio/http2-client
-  commit: 7201f65b31bf0a2b0bc4a904173233e1e728697b
 - github: haskell-grpc-native/http2-grpc-haskell
   subdirs:
   - http2-client-grpc
   - http2-grpc-proto-lens
   - http2-grpc-types
-  commit: 496e92bc967eff02ac3698ba12ba2dfe38bc8b74
-- random-1.2.0
-- splitmix-0.1.0.1
+  commit: d7da6d63a16a1e9d16f20f5c50a29a1c42c3d354
+- chronos-1.1.3
+- bytebuild-0.3.8.0
+- byteslice-0.2.6.0
+- bytesmith-0.3.7.0
+- http2-client-0.10.0.0
+- proto-lens-0.7.1.0
+- proto-lens-protobuf-types-0.7.0.0
+- proto-lens-runtime-0.7.0.1
+- contiguous-0.6.1
+- proto-lens-protoc-0.7.1.0
+- proto-lens-setup-0.4.0.5
+- run-st-0.1.1.0
 
 allow-newer: true
