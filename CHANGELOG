@@ -1,3 +1,6 @@
+Unreleased
+  * This package is no longer tested with stack, only with cabal.
+
 0.10.4
   * Tolerate Lightstep being down
 

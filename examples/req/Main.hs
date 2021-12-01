@@ -9,8 +9,8 @@ import Network.HTTP.Req
 clientMain :: IO ()
 clientMain = do
   withSpan "req-example" $ do
-    setTag "span.kind" "client"
-    setTag "component" "http"
+    setTag @String "span.kind" "client"
+    setTag @String "component" "http"
     Just ctx <- currentSpanContext
     let opts = port 8736 <> foldMap (\(k, v) -> header (original k) v) (inject b3Propagator ctx)
         url = http "127.0.0.1" /: "test"

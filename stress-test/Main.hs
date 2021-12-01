@@ -37,7 +37,7 @@ seriousBusinessMain = concurrently_ frontend backend
         threadDelay 10000
         withSpanAndTags "Tensorflow" [("learning", "deep")] $ do
           threadDelay 100000
-          setTag "learning" "deep"
+          setTag @String "learning" "deep"
         withSpanAndTags "Torch" [("learning", "very_deep")] $ do
           threadDelay 100000
         withSpanAndTags "Hadoop" [("learning", "super_deep")]$ do
@@ -49,7 +49,7 @@ reportMemoryUsage = do
   let GCDetails {..} = gc
   printf "max_live_bytes %d\n" max_live_bytes
   printf "gcdetails_live_bytes %d\n" gcdetails_live_bytes
-  when (max_live_bytes > 10_000_000) $ do
+  when (max_live_bytes > 100_000_000) $ do
     putStrLn "Ate too much memory"
     exitFailure
 

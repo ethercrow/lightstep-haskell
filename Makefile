@@ -8,7 +8,7 @@ README.md: README.template.md examples/readme/Main.hs
 
 .PHONY: proto
 proto:
-	which proto-lens-protoc || stack install proto-lens-protoc
+	which proto-lens-protoc || cabal install proto-lens-protoc
 	mkdir -p gen
 	protoc  "--plugin=protoc-gen-haskell-protolens=$$(which proto-lens-protoc)" \
     --haskell-protolens_out=./gen \
@@ -20,11 +20,7 @@ proto:
 
 .PHONY: cabal-build
 cabal-build:
-	cabal v2-build
-
-.PHONY: stack-build
-stack-build:
-	stack build
+	cabal build
 
 .PHONY: weeder
 weeder:
@@ -40,41 +36,35 @@ watch:
 	ghcid
 
 .PHONY: release
-release: stack-build README.md
-	stack sdist
-	stack upload .
+release: cabal-build README.md
+	cabal sdist
+	cabal upload .
 
 .PHONY: vim
 vim:
 	echo ":e lightstep-haskell.cabal\n:vsplit\n:e examples/readme/Main.hs\n:vsplit\n:term" | nvim -s -
 
-deps.png: lightstep-haskell.cabal stack.yaml
-	stack dot lightstep-haskell \
-		--external \
-		--no-include-base \
-		--prune base,lens,array,bytestring,containers,deepseq,directory,filepath,mtl,parsec,pretty,process,stm,template-haskell,text,time,transformers,unix \
-		| dot -Tpng -o $@
-
-deps-tree.txt: lightstep-haskell.cabal stack.yaml
-	stack ls dependencies tree lightstep-haskell \
-		--no-include-base \
-		--prune base,lens,array,bytestring,containers,deepseq,directory,filepath,ghc-prim,mtl,parsec,pretty,process,rts,stm,template-haskell,text,time,transformers,unix,http2,http2-grpc-proto-lens,http2-grpc-types,http2-client-grpc,http2-client,proto-lens-runtime,proto-lens-setup,proto-lens,proto-lens-protobuf-types \
-    | tee $@
-
 .PHONY: stress
-stress: stack-build
-	env GHCRTS="-T -s" stack exec lightstep-haskell-stress-test
+stress:
+	env GHCRTS="-T -s" cabal run lightstep-haskell-stress-test
 
 .PHONY: alligator-stress
-alligator-stress: stack-build
-	env GHCRTS="-T -s --nonmoving-gc" stack exec lightstep-haskell-stress-test
+alligator-stress:
+	env GHCRTS="-T -s --nonmoving-gc" cabal run lightstep-haskell-stress-test
 
 .PHONY: profiled-stress
 profiled-stress:
-	stack install --profile
-	env GHCRTS="-T -s -P" lightstep-haskell-stress-test
+	cabal run --enable-profiling lightstep-haskell-stress-test -- +RTS -T -s -P -A32m -N2 -qg1 -G3
 	stackcollapse-ghc lightstep-haskell-stress-test.prof | flamegraph.pl > p.svg
 	stackcollapse-ghc lightstep-haskell-stress-test.prof | flamegraph.pl --reverse > pr.svg
 	stackcollapse-ghc --alloc lightstep-haskell-stress-test.prof | flamegraph.pl > a.svg
 	stackcollapse-ghc --alloc lightstep-haskell-stress-test.prof | flamegraph.pl --reverse > ar.svg
 
+.PHONY: heap-profiled-stress
+heap-profiled-stress:
+	cabal run --enable-profiling lightstep-haskell-stress-test -- +RTS -T -s -P -A4m -N2 -qg1 -G3 -hd
+	hp2pretty lightstep-haskell-stress-test.hp && cp lightstep-haskell-stress-test.svg hd.svg
+	cabal run --enable-profiling lightstep-haskell-stress-test -- +RTS -T -s -P -A4m -N2 -qg1 -G3 -hm
+	hp2pretty lightstep-haskell-stress-test.hp && cp lightstep-haskell-stress-test.svg hm.svg
+	cabal run --enable-profiling lightstep-haskell-stress-test -- +RTS -T -s -P -A4m -N2 -qg1 -G3 -hT
+	hp2pretty lightstep-haskell-stress-test.hp && cp lightstep-haskell-stress-test.svg hT.svg

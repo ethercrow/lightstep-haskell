@@ -2,7 +2,6 @@
 
 module Network.Wai.Middleware.LightStep where
 
-import TextShow
 import qualified Data.Text.Encoding as T
 import LightStep.HighLevel.IO
 import LightStep.Internal.Debug
@@ -26,9 +25,8 @@ tracingMiddleware app = \req sendResp -> do
       [ ("span.kind", "server")
       , ("http.method", T.decodeUtf8 (requestMethod req))
       , ("http.target", T.decodeUtf8 (rawPathInfo req))
-      , ("http.flavor", showt (httpMajor $ httpVersion req))
       ]
     app req $ \resp -> do
-      setTag "http.status_code" $ showt (statusCode $ responseStatus resp)
+      setTag "http.status_code" (statusCode $ responseStatus resp)
       sendResp resp
 

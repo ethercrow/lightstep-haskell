@@ -4,3 +4,4 @@
 cabal.project.*
 dist-newstyle
 go.sum
+*.svg
