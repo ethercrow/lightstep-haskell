@@ -37,7 +37,7 @@ seriousBusinessMain = concurrently_ frontend backend
         threadDelay 10000
         withSpanAndTags "Tensorflow" [("learning", "deep")] $ do
           threadDelay 100000
-          setTag "learning" "deep"
+          setTag @String "learning" "deep"
         withSpanAndTags "Torch" [("learning", "very_deep")] $ do
           threadDelay 100000
         withSpanAndTags "Hadoop" [("learning", "super_deep")]$ do

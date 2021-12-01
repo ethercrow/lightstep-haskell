@@ -1,22 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LightStep.Propagation
-  ( module P,
-    module LightStep.Propagation,
-  )
-where
+module LightStep.Propagation where
 
-import Control.Lens
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
-import Data.ProtoLens.Message (defMessage)
 import Data.String
 import GHC.Word
 import Network.HTTP.Types.Header (HeaderName)
 import Network.Wai
-import Proto.Collector as P
-import Proto.Collector_Fields as P
 import Text.Printf
+import OpenTelemetry.SpanContext
 
 type TextMap = [(BS.ByteString, BS.ByteString)]
 
@@ -60,9 +53,9 @@ injectSpanContext ::
   key ->
   SpanContext ->
   [(key, BS.ByteString)]
-injectSpanContext prefix ctx =
-  [ (prefix <> "Traceid", encode_u64 $ ctx ^. traceId),
-    (prefix <> "Spanid", encode_u64 $ ctx ^. spanId),
+injectSpanContext prefix (SpanContext (SId spanId) (TId traceId)) =
+  [ (prefix <> "Traceid", encode_u64 traceId),
+    (prefix <> "Spanid", encode_u64 spanId),
     (prefix <> "Sampled", "true")
   ]
 
@@ -72,8 +65,7 @@ extractSpanContext ::
   [(key, BS.ByteString)] ->
   Maybe SpanContext
 extractSpanContext prefix format =
-  (\(tid, sid) -> defMessage & traceId .~ tid & spanId .~ sid)
-    <$> go format (Nothing, Nothing)
+  (\(tid, sid) -> SpanContext (SId sid) (TId tid)) <$> go format (Nothing, Nothing)
   where
     traceidKey = prefix <> "Traceid"
     spanidKey = prefix <> "Spanid"
